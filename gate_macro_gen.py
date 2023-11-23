@@ -5,9 +5,12 @@ class Application:
         self.outputs = []
         self.digis = []
         self.world = {"x": 0, "y": 0, "z": 0, "unit": None}
-        self.matpath = "/home/bloeher/opt/Gate-9.3"
+        self.matpath = None
         self.physics = "emstandard"
         self.vis = None
+
+    def setMatpath(self, path):
+        self.matpath = path
 
     def setWorld(self, x, y, z, unit):
         self.world["x"] = x
@@ -97,7 +100,7 @@ class Application:
 
 
     def print_mat(self):
-        mat = f"{self.matpath}/GateMaterials.db"
+        mat = f"{self.matpath}"
         print(f"/gate/geometry/setMaterialDatabase {mat}")
 
     def print_phys(self):
