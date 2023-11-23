@@ -2,6 +2,7 @@ from gate_macro_gen import Application
 
 a = Application()
 a.setMatpath("GateMaterials.db")
+a.setPhysics("emstandard")
 a.setWorld(x = 40, y = 40, z = 80, unit = "cm")
 a.addSourceGps(
         "gammas",

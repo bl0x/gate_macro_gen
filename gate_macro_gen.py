@@ -12,6 +12,9 @@ class Application:
     def setMatpath(self, path):
         self.matpath = path
 
+    def setPhysics(self, physics):
+        self.physics = physics
+
     def setWorld(self, x, y, z, unit):
         self.world["x"] = x
         self.world["y"] = y
