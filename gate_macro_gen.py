@@ -17,8 +17,21 @@ class Output():
         pass
 
 class Primitive():
-    def __init__(self):
-        pass
+    def __init__(self, name, geo, material, position, rotations=None):
+        self.name = name
+        self.geo = geo
+        self.position = position
+        self.rotations = rotations
+        self.material = material
+    def print(self):
+        pre = f"/gate/{self.name}"
+        print(f"{pre}/setMaterial {self.material}")
+        pre = f"/gate/{self.name}/placement"
+        if self.rotations is not None:
+            for r in self.rotations:
+                print(f"{pre}/setRotationAxis {tup2str(r['axis'])}")
+                print(f"{pre}/setRotationAngle {tup2str(r['angle'])}")
+        print(f"{pre}/setTranslation {tup2str(self.position)}")
 
 class System():
     def __init__(self):
@@ -137,16 +150,11 @@ class Scanner(System):
         print(f"/gate/{self.sd}/attachCrystalSD")
 
 class Box(Primitive):
-    def __init__(self, name, size, position, material):
-        self.geo = "box"
-        self.name = name
+    def __init__(self, name, size, material, position, rotations=None):
+        super().__init__(name, "box", material, position, rotations)
         self.size = size
-        self.position = position
-        self.material = material
     def print(self):
-        pre = f"/gate/{self.name}"
-        print(f"{pre}/setMaterial {self.material}")
-        print(f"{pre}/placement/setTranslation {tup2str(self.position)}")
+        super().print()
         s = self.size
         pre = f"/gate/{self.name}/geometry"
         print(f"{pre}/setXLength {s[0]} {s[3]}")
@@ -154,18 +162,14 @@ class Box(Primitive):
         print(f"{pre}/setZLength {s[2]} {s[3]}")
 
 class Cylinder(Primitive):
-    def __init__(self, name, radius, height, position, material, phi = None):
-        self.geo = "cylinder"
-        self.name = name
+    def __init__(self, name, radius, height, material, position,
+                 rotations=None, phi=None):
+        super().__init__(name, "cylinder", material, position, rotations)
         self.radius = radius
         self.height = height
         self.phi = phi
-        self.position = position
-        self.material = material
     def print(self):
-        pre = f"/gate/{self.name}"
-        print(f"{pre}/setMaterial {self.material}")
-        print(f"{pre}/placement/setTranslation {tup2str(self.position)}")
+        super().print()
         r = self.radius
         h = self.height
         p = self.phi
