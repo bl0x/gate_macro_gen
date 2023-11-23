@@ -17,8 +17,9 @@ class Output():
         pass
 
 class Primitive():
-    def __init__(self, name, geo, material, position, rotations=None):
+    def __init__(self, name, parent, geo, material, position, rotations=None):
         self.name = name
+        self.parent = parent
         self.geo = geo
         self.position = position
         self.rotations = rotations
@@ -114,6 +115,8 @@ class SourceGps(Source):
         if "position" in p:
             for k,v in p["position"].items():
                 print(f"{pre}/pos/{k} {tup2str(v)}")
+        if "confine" in p:
+            print(f"{pre}/confine {p['confine']}")
 
 
 class SinglesDigi(Digi):
@@ -133,25 +136,37 @@ class Scanner(System):
         self.levels = levels
         self.l0 = levels[0].name
         self.sd = sensitiveDetector
+    def print_geo(self, parent, level, p):
+        if p.parent is not None:
+            pre = f"/gate/{p.parent}/daughters"
+        else:
+            pre = f"/gate/{parent}/daughters"
+        print(f"{pre}/name {p.name}")
+        if level == 1:
+            print(f"{pre}/systemType scanner")
+        print(f"{pre}/insert {p.geo}")
+        p.print()
+        print(f"/gate/systems/{self.l0}/level{level}/attach {p.name}")
     def print(self):
         print(f"##### -- SCANNER -- #####")
-        pre = f"/gate/{self.parent}/daughters"
+        parent = self.parent
         for i,l in enumerate(self.levels):
             level = i + 1
             print(f"# -- Level {level} -- #")
-            print(f"{pre}/name {l.name}")
-            if level == 1:
-                print(f"{pre}/systemType scanner")
-            print(f"{pre}/insert {l.geo}")
-            l.print()
-            print(f"/gate/systems/{self.l0}/level{level}/attach {l.name}")
-            pre = f"/gate/{l.name}/daughters"
+            if isinstance(l, list):
+                for l2 in l:
+                    self.print_geo(parent, level, l2)
+                parent = l[0].name
+            else:
+                self.print_geo(parent, level, l)
+                parent = l.name
         print(f"# -- Sensitive detector -- #")
         print(f"/gate/{self.sd}/attachCrystalSD")
 
 class Box(Primitive):
-    def __init__(self, name, size, material, position, rotations=None):
-        super().__init__(name, "box", material, position, rotations)
+    def __init__(self, name, size, material, position, parent=None,
+                 rotations=None):
+        super().__init__(name, parent, "box", material, position, rotations)
         self.size = size
     def print(self):
         super().print()
@@ -163,8 +178,9 @@ class Box(Primitive):
 
 class Cylinder(Primitive):
     def __init__(self, name, radius, height, material, position,
-                 rotations=None, phi=None):
-        super().__init__(name, "cylinder", material, position, rotations)
+                 parent=None, rotations=None, phi=None):
+        super().__init__(name, parent, "cylinder", material, position,
+                         rotations)
         self.radius = radius
         self.height = height
         self.phi = phi
@@ -228,11 +244,12 @@ class Application:
     def setPhysics(self, physics):
         self.physics = physics
 
-    def setWorld(self, x, y, z, unit):
+    def setWorld(self, x, y, z, unit, material=None):
         self.world["x"] = x
         self.world["y"] = y
         self.world["z"] = z
         self.world["unit"] = unit
+        self.world["material"] = material
 
     def setVis(self, props):
         self.vis = props
@@ -310,6 +327,9 @@ class Application:
         print(f"/gate/world/geometry/setXLength {self.world['x']} {u}")
         print(f"/gate/world/geometry/setYLength {self.world['y']} {u}")
         print(f"/gate/world/geometry/setZLength {self.world['z']} {u}")
+        if self.world['material'] is not None:
+            print(f"/gate/world/setMaterial {self.world['material']}")
+        print(f"/gate/world/vis/forceWireframe true")
 
     def print_outputs(self):
         print("\n# Outputs\n")
