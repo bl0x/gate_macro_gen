@@ -115,20 +115,26 @@ class SinglesDigi(Digi):
             print(f"{pre}/{self.name}/{k} {tup2str(v)}")
 
 class Scanner(System):
-    def __init__(self, parent, primitive, attach = 0):
+    def __init__(self, parent, levels, sensitiveDetector):
         self.parent = parent
-        self.primitive = primitive
-        self.attach = attach
+        self.levels = levels
+        self.l0 = levels[0].name
+        self.sd = sensitiveDetector
     def print(self):
+        print(f"##### -- SCANNER -- #####")
         pre = f"/gate/{self.parent}/daughters"
-        p = self.primitive
-        print(f"{pre}/name {p.name}")
-        print(f"{pre}/systemType scanner")
-        print(f"{pre}/insert {p.geo}")
-        p.print()
-        if self.attach > 0:
-            print(f"/gate/systems/{p.name}/level{self.attach}/attach {p.name}")
-            print(f"/gate/{p.name}/attachCrystalSD")
+        for i,l in enumerate(self.levels):
+            level = i + 1
+            print(f"# -- Level {level} -- #")
+            print(f"{pre}/name {l.name}")
+            if level == 1:
+                print(f"{pre}/systemType scanner")
+            print(f"{pre}/insert {l.geo}")
+            l.print()
+            print(f"/gate/systems/{self.l0}/level{level}/attach {l.name}")
+            pre = f"/gate/{l.name}/daughters"
+        print(f"# -- Sensitive detector -- #")
+        print(f"/gate/{self.sd}/attachCrystalSD")
 
 class Box(Primitive):
     def __init__(self, name, size, position, material):
@@ -146,6 +152,30 @@ class Box(Primitive):
         print(f"{pre}/setXLength {s[0]} {s[3]}")
         print(f"{pre}/setYLength {s[1]} {s[3]}")
         print(f"{pre}/setZLength {s[2]} {s[3]}")
+
+class Cylinder(Primitive):
+    def __init__(self, name, radius, height, position, material, phi = None):
+        self.geo = "cylinder"
+        self.name = name
+        self.radius = radius
+        self.height = height
+        self.phi = phi
+        self.position = position
+        self.material = material
+    def print(self):
+        pre = f"/gate/{self.name}"
+        print(f"{pre}/setMaterial {self.material}")
+        print(f"{pre}/placement/setTranslation {tup2str(self.position)}")
+        r = self.radius
+        h = self.height
+        p = self.phi
+        pre = f"/gate/{self.name}/geometry"
+        print(f"{pre}/setRmin {r[0]} {r[2]}")
+        print(f"{pre}/setRmax {r[1]} {r[2]}")
+        print(f"{pre}/setHeight {h[0]} {h[1]}")
+        if p is not None:
+            print(f"{pre}/setPhiStart {p[0]} {p[2]}")
+            print(f"{pre}/setDeltaPhi {p[1]} {p[2]}")
 
 class RootOutput(Output):
     def __init__(self, filename, flags):
@@ -178,10 +208,11 @@ class TreeOutput(Output):
 class Application:
     def __init__(self):
         self.sources = []
-        self.daughters = []
+        self.systems = []
         self.outputs = []
         self.digis = []
         self.actors = []
+        self.primitives = []
         self.world = {"x": 0, "y": 0, "z": 0, "unit": None}
         self.matpath = None
         self.physics = "emstandard"
@@ -206,19 +237,22 @@ class Application:
         if isinstance(something, Output):
             self.outputs.append(something)
         if isinstance(something, System):
-            self.daughters.append(something)
+            self.systems.append(something)
         if isinstance(something, Digi):
             self.digis.append(something)
         if isinstance(something, Source):
             self.sources.append(something)
         if isinstance(something, Actor):
             self.actors.append(something)
+        if isinstance(something, Primitive):
+            self.primitives.append(something)
 
     def print(self):
         self.print_mat()
         self.print_phys()
         self.print_world()
-        self.print_daughters()
+        self.print_primitives()
+        self.print_systems()
         self.print_actors()
         self.print_digis()
         self.print_init()
@@ -242,7 +276,7 @@ class Application:
         print(f"/vis/scene/add/hits")
         print(f"/tracking/storeTrajectory 1")
         print(f"/vis/scene/add/trajectories")
-        print(f"/gate/application/setTotalNumberOfPrimaries 100")
+        # print(f"/gate/application/setTotalNumberOfPrimaries 100")
         for k,v in self.vis.items():
             if k in ["style", "viewpointThetaPhi"]:
                 pre = "/vis/viewer/set"
@@ -255,7 +289,7 @@ class Application:
                     print(f"/vis/scene/add/axes")
                 continue
             else:
-                pre = "/vis/"
+                pre = "/vis"
             print(f"{pre}/{k} {tup2str(v)}")
 
     def print_mat(self):
@@ -278,10 +312,18 @@ class Application:
         for o in self.outputs:
             o.print()
 
-    def print_daughters(self):
-        print("\n# Volumes\n")
-        for d in self.daughters:
-            d.print()
+    def print_primitives(self):
+        print("\n# Primitives\n")
+        for p in self.primitives:
+            pre = f"/gate/world/daughters"
+            print(f"{pre}/name {p.name}")
+            print(f"{pre}/insert {p.geo}")
+            p.print()
+
+    def print_systems(self):
+        print("\n# Systems\n")
+        for s in self.systems:
+            s.print()
 
     def print_digis(self):
         print("\n# Digitizers\n")
