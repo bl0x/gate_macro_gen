@@ -1,9 +1,187 @@
+# base classes
+
+class Actor():
+    def __init__(self):
+        pass
+
+class Source():
+    def __init__(self):
+        pass
+
+class Digi():
+    def __init__(self):
+        pass
+
+class Output():
+    def __init__(self):
+        pass
+
+class Primitive():
+    def __init__(self):
+        pass
+
+class System():
+    def __init__(self):
+        pass
+
+# derived classes
+
+class SimulationStatisticActor(Actor):
+    def __init__(self, name, filename):
+        self.name = name
+        self.filename = filename
+    def print(self):
+        print(f"/gate/actor/addActor SimulationStatisticActor {self.name}")
+        print(f"/gate/actor/{self.name}/save {self.filename}")
+
+class DoseActor(Actor):
+    def __init__(self, name, filename, attached):
+        self.name = name
+        self.filename = filename
+        self.attached = attached
+    def print(self):
+        print(f"/gate/actor/addActor DoseActor {self.name}")
+        print(f"/gate/actor/{self.name}/save {self.filename}")
+        print(f"/gate/actor/{self.name}/attachTo {self.attached}")
+
+class EnergySpectrumActor(Actor):
+    def __init__(self, name, filename, attached, spectrum = None, letSpectrum = None, edep = None, eloss = None):
+        self.name = name
+        self.filename = filename
+        self.attached = attached
+        self.spectrum = spectrum
+        self.letSpectrum = letSpectrum
+        self.edep = edep
+        self.eloss = eloss
+    def print_hprops(self, pre, props, _min, _max, _bins):
+        print(f"{pre}/set{_min} {tup2str(props['emin'])}")
+        print(f"{pre}/set{_max} {tup2str(props['emax'])}")
+        print(f"{pre}/set{_bins} {tup2str(props['bins'])}")
+    def print(self):
+        print(f"/gate/actor/addActor EnergySpectrumActor {self.name}")
+        pre = f"/gate/actor/{self.name}"
+        print(f"{pre}/save {self.filename}")
+        print(f"{pre}/attachTo {self.attached}")
+        if self.spectrum is not None:
+            self.print_hprops(f"{pre}/energySpectrum", self.spectrum,
+                              "Emin", "Emax", "NumberOfBins")
+        if self.letSpectrum is not None:
+            print(f"{pre}/enableLETSpectrum true")
+            self.print_hprops(f"{pre}/LETSpectrum", self.letSpectrum,
+                              "LETmin", "LETmax", "NumberOfBins")
+        if self.edep is not None:
+            for f in self.edep:
+                print(f"{pre}/enable{f}Histo true")
+        if self.eloss is not None:
+            print(f"{pre}/enableElossHisto true")
+            self.print_hprops(f"{pre}/energyLossHisto", self.eloss,
+                              "EdepMin", "EdepMax", "NumberOfEdepBins")
+
+
+
+
+class SourceGps(Source):
+    def __init__(self, name, **kwargs):
+        self.name = name
+        self.props = kwargs
+    def print(self):
+        p = self.props
+        pre = f"/gate/source/{self.name}"
+        print(f"/gate/source/addSource {self.name} gps")
+        if "activity" in p:
+            print(f"{pre}/setActivity {tup2str(p['activity'])}")
+        pre += "/gps"
+        if "particle" in p:
+            print(f"{pre}/particle {p['particle']}")
+        if "mono" in p:
+            print(f"{pre}/ene/mono {tup2str(p['mono'])}")
+        if "angle" in p:
+            for k,v in p["angle"].items():
+                print(f"{pre}/ang/{k} {tup2str(v)}")
+        if "position" in p:
+            for k,v in p["position"].items():
+                print(f"{pre}/pos/{k} {tup2str(v)}")
+
+
+class SinglesDigi(Digi):
+    def __init__(self, source, name, props):
+        self.source = source
+        self.name = name
+        self.props = props
+    def print(self):
+        pre = f"/gate/digitizerMgr/{self.source}/SinglesDigitizer/Singles"
+        print(f"{pre}/insert {self.name}")
+        for k,v in self.props.items():
+            print(f"{pre}/{self.name}/{k} {tup2str(v)}")
+
+class Scanner(System):
+    def __init__(self, parent, primitive, attach = 0):
+        self.parent = parent
+        self.primitive = primitive
+        self.attach = attach
+    def print(self):
+        pre = f"/gate/{self.parent}/daughters"
+        p = self.primitive
+        print(f"{pre}/name {p.name}")
+        print(f"{pre}/systemType scanner")
+        print(f"{pre}/insert {p.geo}")
+        p.print()
+        if self.attach > 0:
+            print(f"/gate/systems/{p.name}/level{self.attach}/attach {p.name}")
+            print(f"/gate/{p.name}/attachCrystalSD")
+
+class Box(Primitive):
+    def __init__(self, name, size, position, material):
+        self.geo = "box"
+        self.name = name
+        self.size = size
+        self.position = position
+        self.material = material
+    def print(self):
+        pre = f"/gate/{self.name}"
+        print(f"{pre}/setMaterial {self.material}")
+        print(f"{pre}/placement/setTranslation {tup2str(self.position)}")
+        s = self.size
+        pre = f"/gate/{self.name}/geometry"
+        print(f"{pre}/setXLength {s[0]} {s[3]}")
+        print(f"{pre}/setYLength {s[1]} {s[3]}")
+        print(f"{pre}/setZLength {s[2]} {s[3]}")
+
+class RootOutput(Output):
+    def __init__(self, filename, flags):
+        self.filename = filename
+        self.flags = flags
+    def print(self):
+        pre = "/gate/output/root"
+        print(f"{pre}/enable")
+        print(f"{pre}/setFileName {self.filename}")
+        for f in self.flags:
+            print(f"{pre}/setRoot{f}Flag 1")
+
+class TreeOutput(Output):
+    def __init__(self, filenames, hits, collections):
+        self.filenames = filenames
+        self.hits = hits
+        self.collections = collections
+    def print(self):
+        pre = "/gate/output/tree"
+        print(f"{pre}/enable")
+        for f in self.filenames:
+            print(f"{pre}/addFileName {f}")
+        if self.hits is not None:
+            print(f"{pre}/hits/enable")
+        for c in self.collections:
+            print(f"{pre}/addCollection {c}")
+
+# main application class
+
 class Application:
     def __init__(self):
         self.sources = []
         self.daughters = []
         self.outputs = []
         self.digis = []
+        self.actors = []
         self.world = {"x": 0, "y": 0, "z": 0, "unit": None}
         self.matpath = None
         self.physics = "emstandard"
@@ -24,56 +202,35 @@ class Application:
     def setVis(self, props):
         self.vis = props
 
-    def addRootOutput(self, filename, flags):
-        o = {}
-        o["name"] = "root"
-        o["filename"] = filename
-        o["flags"] = flags
-        self.outputs.append(o)
+    def add(self, something):
+        if isinstance(something, Output):
+            self.outputs.append(something)
+        if isinstance(something, System):
+            self.daughters.append(something)
+        if isinstance(something, Digi):
+            self.digis.append(something)
+        if isinstance(something, Source):
+            self.sources.append(something)
+        if isinstance(something, Actor):
+            self.actors.append(something)
 
-    def addTreeOutput(self, filenames, hits, collections):
-        o = {}
-        o["name"] = "tree"
-        o["filenames"] = filenames
-        o["hits"] = hits
-        o["collections"] = collections
-        self.outputs.append(o)
-
-    def addSourceGps(self, name, **kwargs):
-        s = {}
-        s["name"] = name
-        s["gps"] = True
-        for k,v in kwargs.items():
-            s[k] = v
-        self.sources.append(s)
-
-    def addSinglesDigi(self, source, name, props = None):
-        d = {}
-        d["type"] = "singles"
-        d["source"] = source
-        d["name"] = name
-        d["props"] = props
-        self.digis.append(d)
-
-    def addDaughter(self, parent, name, systemType, props):
-        d = {}
-        d["parent"] = parent
-        d["name"] = name
-        d["props"] = props
-        d["type"] = systemType
-        self.daughters.append(d)
-
-    def start(self):
+    def print(self):
         self.print_mat()
         self.print_phys()
         self.print_world()
         self.print_daughters()
+        self.print_actors()
         self.print_digis()
         self.print_init()
         self.print_sources()
         self.print_outputs()
         self.print_vis()
         self.print_start()
+
+    def print_actors(self):
+        print("\n# Actors\n")
+        for a in self.actors:
+            a.print()
 
     def print_vis(self):
         print("\n# Visualization\n")
@@ -99,8 +256,7 @@ class Application:
                 continue
             else:
                 pre = "/vis/"
-            print(f"{pre}/{k} {self.tup2str(v)}")
-
+            print(f"{pre}/{k} {tup2str(v)}")
 
     def print_mat(self):
         mat = f"{self.matpath}"
@@ -117,100 +273,25 @@ class Application:
         print(f"/gate/world/geometry/setYLength {self.world['y']} {u}")
         print(f"/gate/world/geometry/setZLength {self.world['z']} {u}")
 
-    def tup2str(self, tup):
-        if isinstance(tup, tuple):
-            return " ".join(map(str,(tup)))
-        else:
-            return str(tup)
-
-    def print_output_root(self, o):
-        print("\n# Output root\n")
-        pre = "/gate/output/root"
-        print(f"{pre}/enable")
-        print(f"{pre}/setFileName {o['filename']}")
-        for f in o["flags"]:
-            print(f"{pre}/setRoot{f}Flag 1")
-
-    def print_output_tree(self, o):
-        print("\n# Output tree\n")
-        pre = "/gate/output/tree"
-        print(f"{pre}/enable")
-        for f in o['filenames']:
-            print(f"{pre}/addFileName {f}")
-        if o['hits']:
-            print(f"{pre}/hits/enable")
-        for c in o['collections']:
-            print(f"{pre}/addCollection {c}")
-
-
     def print_outputs(self):
+        print("\n# Outputs\n")
         for o in self.outputs:
-            if o["name"] == "tree":
-                self.print_output_tree(o)
-            elif o["name"] == "root":
-                self.print_output_root(o)
+            o.print()
 
     def print_daughters(self):
         print("\n# Volumes\n")
         for d in self.daughters:
-            parent = d['parent']
-            name = d['name']
-            pre = f"/gate/{parent}/daughters"
-            p = d['props']
-            print(f"{pre}/name {name}")
-            print(f"{pre}/systemType {d['type']}")
-            print(f"{pre}/insert {p['primitive']}")
-            pre = f"/gate/{name}"
-            if "material" in p:
-                print(f"{pre}/setMaterial {p['material']}")
-            if "position" in p:
-                print(f"{pre}/placement/setTranslation {self.tup2str(p['position'])}")
-            if "size" in p:
-                s = p['size']
-                pre = f"/gate/{name}/geometry"
-                print(f"{pre}/setXLength {s[0]} {s[3]}")
-                print(f"{pre}/setYLength {s[1]} {s[3]}")
-                print(f"{pre}/setZLength {s[2]} {s[3]}")
-            if "attach" in p:
-                print(f"/gate/systems/{name}/level{p['attach']}/attach {name}")
-                print(f"/gate/{name}/attachCrystalSD")
-
-    def print_digis_singles(self, d):
-        src = d["source"]
-        pre = f"/gate/digitizerMgr/{src}/SinglesDigitizer/Singles"
-        print(f"{pre}/insert {d['name']}")
-        for k,v in d["props"].items():
-            print(f"{pre}/{d['name']}/{k} {self.tup2str(v)}")
-
+            d.print()
 
     def print_digis(self):
         print("\n# Digitizers\n")
         for d in self.digis:
-            if d["type"] == "singles":
-                self.print_digis_singles(d)
+            d.print()
 
     def print_sources(self):
         print("\n# Sources\n")
         for s in self.sources:
-            name = s['name']
-            pre = f"/gate/source/{name}"
-            if "gps" in s:
-                print(f"/gate/source/addSource {name} gps")
-            else:
-                print(f"/gate/source/addSource {name}")
-            if "activity" in s:
-                print(f"{pre}/setActivity {self.tup2str(s['activity'])}")
-            pre += "/gps"
-            if "particle" in s:
-                print(f"{pre}/particle {s['particle']}")
-            if "mono" in s:
-                print(f"{pre}/ene/mono {self.tup2str(s['mono'])}")
-            if "angle" in s:
-                for k,v in s["angle"].items():
-                    print(f"{pre}/ang/{k} {self.tup2str(v)}")
-            if "position" in s:
-                for k,v in s["position"].items():
-                    print(f"{pre}/pos/{k} {self.tup2str(v)}")
+            s.print()
 
     def print_init(self):
         print("\n# Init\n")
@@ -221,4 +302,12 @@ class Application:
         print("/gate/random/setEngineName MersenneTwister")
         print("/gate/random/setEngineSeed auto")
         print("/gate/application/startDAQ")
+
+# utilities
+
+def tup2str(tup):
+    if isinstance(tup, tuple):
+        return " ".join(map(str,(tup)))
+    else:
+        return str(tup)
 
