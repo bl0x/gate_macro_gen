@@ -233,8 +233,8 @@ class Application:
         self.digis = []
         self.actors = []
         self.primitives = []
-        self.world = {"x": 0, "y": 0, "z": 0, "unit": None}
-        self.matpath = None
+        self.world = {"x": 1, "y": 1, "z": 1, "unit": "m", "material": "Vacuum"}
+        self.matpath = "GateMaterials.db"
         self.physics = "emstandard"
         self.vis = None
 

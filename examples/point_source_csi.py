@@ -7,7 +7,7 @@ a.add(SourceGps(
         "gammas",
         particle = "gamma",
         mono = (662., "keV"),
-        activity = (5e5, "becquerel"),
+        activity = (5e1, "becquerel"),
         angle = {"type": "iso"},
         position = {"type": "Volume", "shape": "Cylinder",
                     "radius": (1, "cm"),
@@ -30,7 +30,7 @@ crystal = Box(
         position = (0, 0, -20, "cm"),
         material = "CsITl"
 )
-a.add(Scanner("world", crystal, attach=1))
+a.add(Scanner("world", levels=[crystal], sensitiveDetector="crystal"))
 a.add(SinglesDigi("crystal", "adder",
                  {"positionPolicy": "energyWeightedCentroid"}))
 a.add(SinglesDigi("crystal", "readout", {"setDepth": 1}))
