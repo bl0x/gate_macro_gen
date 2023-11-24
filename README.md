@@ -1,6 +1,8 @@
 # gate_macro_gen - A generator for openGATE macro files, written in Python
 
-This is a macro file generator for the Monte-Carlo particle simulation tool openGate.
+This is a macro file generator for the Monte-Carlo particle simulation tool [https://github.com/OpenGATE](openGate).
+
+**Note:** This tool is meant for the C++ based version of openGate (or simply [https://github.com/OpenGATE/Gate](Gate)). It is not meant for the new Python-based version that is in active development.
 
 ## Why?
 
