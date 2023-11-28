@@ -33,6 +33,11 @@ class Primitive():
                 print(f"{pre}/setRotationAxis {tup2str(r['axis'])}")
                 print(f"{pre}/setRotationAngle {tup2str(r['angle'])}")
         print(f"{pre}/setTranslation {tup2str(self.position)}")
+    def dict(self):
+        return {"name": self.name,
+                "material": self.material,
+                "position": self.position,
+                "rotations": self.rotations}
 
 class System():
     def __init__(self):
@@ -116,7 +121,7 @@ class SourceGps(Source):
             for k,v in p["position"].items():
                 print(f"{pre}/pos/{k} {tup2str(v)}")
         if "confine" in p:
-            print(f"{pre}/confine {p['confine']}")
+            print(f"{pre}/pos/confine {p['confine']}")
 
 
 class SinglesDigi(Digi):
@@ -175,6 +180,9 @@ class Box(Primitive):
         print(f"{pre}/setXLength {s[0]} {s[3]}")
         print(f"{pre}/setYLength {s[1]} {s[3]}")
         print(f"{pre}/setZLength {s[2]} {s[3]}")
+    def dict(self):
+        props = super().dict() | {"size": self.size}
+        return {"box": props}
 
 class Cylinder(Primitive):
     def __init__(self, name, radius, height, material, position,
@@ -305,6 +313,10 @@ class Application:
                 pre = "/vis/viewer"
             elif k in ["endOfEventAction"]:
                 pre = "/vis/scene"
+            elif k in ["auxiliaryEdges"]:
+                if v is True:
+                    print(f"/vis/viewer/set/auxiliaryEdge true")
+                continue
             elif k in ["axes"]:
                 if v is True:
                     print(f"/vis/scene/add/axes")
