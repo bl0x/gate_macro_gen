@@ -117,6 +117,14 @@ class SourceGps(Source):
         if "angle" in p:
             for k,v in p["angle"].items():
                 print(f"{pre}/ang/{k} {tup2str(v)}")
+        if "theta" in p:
+                min_, max_, unit_ = p['theta']
+                print(f"{pre}/ang/mintheta {min_} {unit_}")
+                print(f"{pre}/ang/maxtheta {max_} {unit_}")
+        if "phi" in p:
+                min_, max_, unit_ = p['phi']
+                print(f"{pre}/ang/minphi {min_} {unit_}")
+                print(f"{pre}/ang/maxphi {max_} {unit_}")
         if "position" in p:
             for k,v in p["position"].items():
                 print(f"{pre}/pos/{k} {tup2str(v)}")
@@ -139,9 +147,12 @@ class Scanner(System):
     def __init__(self, parent, levels, sensitiveDetector):
         self.parent = parent
         self.levels = levels
-        self.l0 = levels[0].name
+        if isinstance(levels[0], list):
+            self.l0 = levels[0][0].name
+        else:
+            self.l0 = levels[0].name
         self.sd = sensitiveDetector
-    def print_geo(self, parent, level, p):
+    def print_geo(self, parent, level, p, attach):
         if p.parent is not None:
             pre = f"/gate/{p.parent}/daughters"
         else:
@@ -151,7 +162,8 @@ class Scanner(System):
             print(f"{pre}/systemType scanner")
         print(f"{pre}/insert {p.geo}")
         p.print()
-        print(f"/gate/systems/{self.l0}/level{level}/attach {p.name}")
+        if attach == True:
+            print(f"/gate/systems/{self.l0}/level{level}/attach {p.name}")
     def print(self):
         print(f"##### -- SCANNER -- #####")
         parent = self.parent
@@ -160,10 +172,14 @@ class Scanner(System):
             print(f"# -- Level {level} -- #")
             if isinstance(l, list):
                 for l2 in l:
-                    self.print_geo(parent, level, l2)
+                    if l2 == l[0]:
+                        attach=True
+                    else:
+                        attach=False
+                    self.print_geo(parent, level, l2, attach=attach)
                 parent = l[0].name
             else:
-                self.print_geo(parent, level, l)
+                self.print_geo(parent, level, l, attach=True)
                 parent = l.name
         print(f"# -- Sensitive detector -- #")
         print(f"/gate/{self.sd}/attachCrystalSD")
@@ -243,7 +259,7 @@ class Application:
         self.primitives = []
         self.world = {"x": 1, "y": 1, "z": 1, "unit": "m", "material": "Vacuum"}
         self.matpath = "GateMaterials.db"
-        self.physics = "emstandard"
+        self.physics = "emstandard_opt4"
         self.vis = None
 
     def setMatpath(self, path):
@@ -277,6 +293,11 @@ class Application:
             self.primitives.append(something)
 
     def print(self):
+        if self.vis is not None:
+            print("# NOTE: Visualisation enabled: Setting all activities to 1e3 Bq")
+            for s in self.sources:
+                if "activity" in s.props:
+                    s.props["activity"] = (1e3, "becquerel")
         self.print_mat()
         self.print_phys()
         self.print_world()
