@@ -17,16 +17,20 @@ class Output():
         pass
 
 class Primitive():
-    def __init__(self, name, parent, geo, material, position, rotations=None):
+    def __init__(self, name, parent, geo, material, position, rotations=None,
+                 color=None):
         self.name = name
         self.parent = parent
         self.geo = geo
         self.position = position
         self.rotations = rotations
         self.material = material
+        self.color = color
     def print(self):
         pre = f"/gate/{self.name}"
         print(f"{pre}/setMaterial {self.material}")
+        if self.color is not None:
+            print(f"{pre}/vis/setColor {self.color}")
         pre = f"/gate/{self.name}/placement"
         if self.rotations is not None:
             for r in self.rotations:
@@ -186,8 +190,9 @@ class Scanner(System):
 
 class Box(Primitive):
     def __init__(self, name, size, material, position, parent=None,
-                 rotations=None):
-        super().__init__(name, parent, "box", material, position, rotations)
+                 rotations=None, color=None):
+        super().__init__(name, parent, "box", material, position, rotations,
+                         color)
         self.size = size
     def print(self):
         super().print()
@@ -202,9 +207,9 @@ class Box(Primitive):
 
 class Cylinder(Primitive):
     def __init__(self, name, radius, height, material, position,
-                 parent=None, rotations=None, phi=None):
+                 parent=None, rotations=None, phi=None, color=None):
         super().__init__(name, parent, "cylinder", material, position,
-                         rotations)
+                         rotations, color)
         self.radius = radius
         self.height = height
         self.phi = phi
