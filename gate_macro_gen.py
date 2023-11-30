@@ -28,15 +28,16 @@ class Primitive():
         self.color = color
     def print(self):
         pre = f"/gate/{self.name}"
-        print(f"{pre}/setMaterial {self.material}")
+        text = f"{pre}/setMaterial {self.material}\n"
         if self.color is not None:
-            print(f"{pre}/vis/setColor {self.color}")
+            text += f"{pre}/vis/setColor {self.color}\n"
         pre = f"/gate/{self.name}/placement"
         if self.rotations is not None:
             for r in self.rotations:
-                print(f"{pre}/setRotationAxis {tup2str(r['axis'])}")
-                print(f"{pre}/setRotationAngle {tup2str(r['angle'])}")
-        print(f"{pre}/setTranslation {tup2str(self.position)}")
+                text += f"{pre}/setRotationAxis {tup2str(r['axis'])}\n"
+                text += f"{pre}/setRotationAngle {tup2str(r['angle'])}\n"
+        text += f"{pre}/setTranslation {tup2str(self.position)}\n"
+        return text
     def dict(self):
         return {"name": self.name,
                 "material": self.material,
@@ -54,8 +55,9 @@ class SimulationStatisticActor(Actor):
         self.name = name
         self.filename = filename
     def print(self):
-        print(f"/gate/actor/addActor SimulationStatisticActor {self.name}")
-        print(f"/gate/actor/{self.name}/save {self.filename}")
+        text = f"/gate/actor/addActor SimulationStatisticActor {self.name}\n"
+        text += f"/gate/actor/{self.name}/save {self.filename}\n"
+        return text
 
 class DoseActor(Actor):
     def __init__(self, name, filename, attached):
@@ -63,9 +65,10 @@ class DoseActor(Actor):
         self.filename = filename
         self.attached = attached
     def print(self):
-        print(f"/gate/actor/addActor DoseActor {self.name}")
-        print(f"/gate/actor/{self.name}/save {self.filename}")
-        print(f"/gate/actor/{self.name}/attachTo {self.attached}")
+        text = f"/gate/actor/addActor DoseActor {self.name}\n"
+        text += f"/gate/actor/{self.name}/save {self.filename}\n"
+        text += f"/gate/actor/{self.name}/attachTo {self.attached}\n"
+        return text
 
 class EnergySpectrumActor(Actor):
     def __init__(self, name, filename, attached, spectrum = None, letSpectrum = None, edep = None, eloss = None):
@@ -77,28 +80,30 @@ class EnergySpectrumActor(Actor):
         self.edep = edep
         self.eloss = eloss
     def print_hprops(self, pre, props, _min, _max, _bins):
-        print(f"{pre}/set{_min} {tup2str(props['emin'])}")
-        print(f"{pre}/set{_max} {tup2str(props['emax'])}")
-        print(f"{pre}/set{_bins} {tup2str(props['bins'])}")
+        text = f"{pre}/set{_min} {tup2str(props['emin'])}\n"
+        text += f"{pre}/set{_max} {tup2str(props['emax'])}\n"
+        text += f"{pre}/set{_bins} {tup2str(props['bins'])}\n"
+        return text
     def print(self):
-        print(f"/gate/actor/addActor EnergySpectrumActor {self.name}")
+        text = f"/gate/actor/addActor EnergySpectrumActor {self.name}\n"
         pre = f"/gate/actor/{self.name}"
-        print(f"{pre}/save {self.filename}")
-        print(f"{pre}/attachTo {self.attached}")
+        text += f"{pre}/save {self.filename}\n"
+        text += f"{pre}/attachTo {self.attached}\n"
         if self.spectrum is not None:
-            self.print_hprops(f"{pre}/energySpectrum", self.spectrum,
+            text += self.print_hprops(f"{pre}/energySpectrum", self.spectrum,
                               "Emin", "Emax", "NumberOfBins")
         if self.letSpectrum is not None:
-            print(f"{pre}/enableLETSpectrum true")
-            self.print_hprops(f"{pre}/LETSpectrum", self.letSpectrum,
+            text += f"{pre}/enableLETSpectrum true\n"
+            text += self.print_hprops(f"{pre}/LETSpectrum", self.letSpectrum,
                               "LETmin", "LETmax", "NumberOfBins")
         if self.edep is not None:
             for f in self.edep:
-                print(f"{pre}/enable{f}Histo true")
+                text += f"{pre}/enable{f}Histo true\n"
         if self.eloss is not None:
-            print(f"{pre}/enableElossHisto true")
-            self.print_hprops(f"{pre}/energyLossHisto", self.eloss,
+            text += "{pre}/enableElossHisto true\n"
+            text += self.print_hprops(f"{pre}/energyLossHisto", self.eloss,
                               "EdepMin", "EdepMax", "NumberOfEdepBins")
+        return text
 
 
 
@@ -110,30 +115,31 @@ class SourceGps(Source):
     def print(self):
         p = self.props
         pre = f"/gate/source/{self.name}"
-        print(f"/gate/source/addSource {self.name} gps")
+        text = f"/gate/source/addSource {self.name} gps\n"
         if "activity" in p:
-            print(f"{pre}/setActivity {tup2str(p['activity'])}")
+            text += f"{pre}/setActivity {tup2str(p['activity'])}\n"
         pre += "/gps"
         if "particle" in p:
-            print(f"{pre}/particle {p['particle']}")
+            text += f"{pre}/particle {p['particle']}\n"
         if "mono" in p:
-            print(f"{pre}/ene/mono {tup2str(p['mono'])}")
+            text += f"{pre}/ene/mono {tup2str(p['mono'])}\n"
         if "angle" in p:
             for k,v in p["angle"].items():
-                print(f"{pre}/ang/{k} {tup2str(v)}")
+                text += f"{pre}/ang/{k} {tup2str(v)}\n"
         if "theta" in p:
                 min_, max_, unit_ = p['theta']
-                print(f"{pre}/ang/mintheta {min_} {unit_}")
-                print(f"{pre}/ang/maxtheta {max_} {unit_}")
+                text += f"{pre}/ang/mintheta {min_} {unit_}\n"
+                text += f"{pre}/ang/maxtheta {max_} {unit_}\n"
         if "phi" in p:
                 min_, max_, unit_ = p['phi']
-                print(f"{pre}/ang/minphi {min_} {unit_}")
-                print(f"{pre}/ang/maxphi {max_} {unit_}")
+                text += f"{pre}/ang/minphi {min_} {unit_}\n"
+                text += f"{pre}/ang/maxphi {max_} {unit_}\n"
         if "position" in p:
             for k,v in p["position"].items():
-                print(f"{pre}/pos/{k} {tup2str(v)}")
+                text += f"{pre}/pos/{k} {tup2str(v)}\n"
         if "confine" in p:
-            print(f"{pre}/pos/confine {p['confine']}")
+            text += f"{pre}/pos/confine {p['confine']}\n"
+        return text
 
 
 class SinglesDigi(Digi):
@@ -143,9 +149,10 @@ class SinglesDigi(Digi):
         self.props = props
     def print(self):
         pre = f"/gate/digitizerMgr/{self.source}/SinglesDigitizer/Singles"
-        print(f"{pre}/insert {self.name}")
+        text = f"{pre}/insert {self.name}\n"
         for k,v in self.props.items():
-            print(f"{pre}/{self.name}/{k} {tup2str(v)}")
+            text += f"{pre}/{self.name}/{k} {tup2str(v)}\n"
+        return text
 
 class Scanner(System):
     def __init__(self, parent, levels, sensitiveDetector):
@@ -161,32 +168,34 @@ class Scanner(System):
             pre = f"/gate/{p.parent}/daughters"
         else:
             pre = f"/gate/{parent}/daughters"
-        print(f"{pre}/name {p.name}")
+        text = f"{pre}/name {p.name}\n"
         if level == 1:
-            print(f"{pre}/systemType scanner")
-        print(f"{pre}/insert {p.geo}")
-        p.print()
+            text += f"{pre}/systemType scanner\n"
+        text += f"{pre}/insert {p.geo}\n"
+        text += p.print()
         if attach == True:
-            print(f"/gate/systems/{self.l0}/level{level}/attach {p.name}")
+            text += f"/gate/systems/{self.l0}/level{level}/attach {p.name}\n"
+        return text
     def print(self):
-        print(f"##### -- SCANNER -- #####")
+        text = f"##### -- SCANNER -- #####\n"
         parent = self.parent
         for i,l in enumerate(self.levels):
             level = i + 1
-            print(f"# -- Level {level} -- #")
+            text += f"# -- Level {level} -- #\n"
             if isinstance(l, list):
                 for l2 in l:
                     if l2 == l[0]:
                         attach=True
                     else:
                         attach=False
-                    self.print_geo(parent, level, l2, attach=attach)
+                    text += self.print_geo(parent, level, l2, attach=attach)
                 parent = l[0].name
             else:
-                self.print_geo(parent, level, l, attach=True)
+                text += self.print_geo(parent, level, l, attach=True)
                 parent = l.name
-        print(f"# -- Sensitive detector -- #")
-        print(f"/gate/{self.sd}/attachCrystalSD")
+        text += f"# -- Sensitive detector -- #\n"
+        text += f"/gate/{self.sd}/attachCrystalSD\n"
+        return text
 
 class Box(Primitive):
     def __init__(self, name, size, material, position, parent=None,
@@ -195,12 +204,13 @@ class Box(Primitive):
                          color)
         self.size = size
     def print(self):
-        super().print()
+        text = super().print()
         s = self.size
         pre = f"/gate/{self.name}/geometry"
-        print(f"{pre}/setXLength {s[0]} {s[3]}")
-        print(f"{pre}/setYLength {s[1]} {s[3]}")
-        print(f"{pre}/setZLength {s[2]} {s[3]}")
+        text += f"{pre}/setXLength {s[0]} {s[3]}\n"
+        text += f"{pre}/setYLength {s[1]} {s[3]}\n"
+        text += f"{pre}/setZLength {s[2]} {s[3]}\n"
+        return text
     def dict(self):
         props = super().dict() | {"size": self.size}
         return {"box": props}
@@ -214,17 +224,18 @@ class Cylinder(Primitive):
         self.height = height
         self.phi = phi
     def print(self):
-        super().print()
+        text = super().print()
         r = self.radius
         h = self.height
         p = self.phi
         pre = f"/gate/{self.name}/geometry"
-        print(f"{pre}/setRmin {r[0]} {r[2]}")
-        print(f"{pre}/setRmax {r[1]} {r[2]}")
-        print(f"{pre}/setHeight {h[0]} {h[1]}")
+        text += f"{pre}/setRmin {r[0]} {r[2]}\n"
+        text += f"{pre}/setRmax {r[1]} {r[2]}\n"
+        text += f"{pre}/setHeight {h[0]} {h[1]}\n"
         if p is not None:
-            print(f"{pre}/setPhiStart {p[0]} {p[2]}")
-            print(f"{pre}/setDeltaPhi {p[1]} {p[2]}")
+            text += f"{pre}/setPhiStart {p[0]} {p[2]}\n"
+            text += f"{pre}/setDeltaPhi {p[1]} {p[2]}\n"
+        return text
 
 class RootOutput(Output):
     def __init__(self, filename, flags):
@@ -232,10 +243,11 @@ class RootOutput(Output):
         self.flags = flags
     def print(self):
         pre = "/gate/output/root"
-        print(f"{pre}/enable")
-        print(f"{pre}/setFileName {self.filename}")
+        text = f"{pre}/enable\n"
+        text += f"{pre}/setFileName {self.filename}\n"
         for f in self.flags:
-            print(f"{pre}/setRoot{f}Flag 1")
+            text += f"{pre}/setRoot{f}Flag 1\n"
+        return text
 
 class TreeOutput(Output):
     def __init__(self, filenames, hits, collections):
@@ -244,13 +256,14 @@ class TreeOutput(Output):
         self.collections = collections
     def print(self):
         pre = "/gate/output/tree"
-        print(f"{pre}/enable")
+        text = f"{pre}/enable\n"
         for f in self.filenames:
-            print(f"{pre}/addFileName {f}")
+            text += f"{pre}/addFileName {f}\n"
         if self.hits is not None:
-            print(f"{pre}/hits/enable")
+            text += f"{pre}/hits/enable\n"
         for c in self.collections:
-            print(f"{pre}/addCollection {c}")
+            text += f"{pre}/addCollection {c}\n"
+        return text
 
 # main application class
 
@@ -298,40 +311,43 @@ class Application:
             self.primitives.append(something)
 
     def print(self):
+        text = ""
         if self.vis is not None:
-            print("# NOTE: Visualisation enabled: Setting all activities to 1e3 Bq")
+            text += "# NOTE: Visualisation enabled: Setting all activities to 1e3 Bq\n"
             for s in self.sources:
                 if "activity" in s.props:
                     s.props["activity"] = (1e3, "becquerel")
-        self.print_mat()
-        self.print_phys()
-        self.print_world()
-        self.print_primitives()
-        self.print_systems()
-        self.print_actors()
-        self.print_digis()
-        self.print_init()
-        self.print_sources()
-        self.print_outputs()
-        self.print_vis()
-        self.print_start()
+        text += self.print_mat()
+        text += self.print_phys()
+        text += self.print_world()
+        text += self.print_primitives()
+        text += self.print_systems()
+        text += self.print_actors()
+        text += self.print_digis()
+        text += self.print_init()
+        text += self.print_sources()
+        text += self.print_outputs()
+        text += self.print_vis()
+        text += self.print_start()
+        return text
 
     def print_actors(self):
-        print("\n# Actors\n")
+        text = "\n# Actors\n\n"
         for a in self.actors:
-            a.print()
+            text += a.print()
+        return text
 
     def print_vis(self):
-        print("\n# Visualization\n")
+        text = "\n# Visualization\n\n"
         if self.vis is None:
-            return
-        print(f"/vis/open OGLSQt")
-        print(f"/vis/viewer/reset")
-        print(f"/vis/drawVolume")
-        print(f"/vis/scene/add/hits")
-        print(f"/tracking/storeTrajectory 1")
-        print(f"/vis/scene/add/trajectories")
-        # print(f"/gate/application/setTotalNumberOfPrimaries 100")
+            return ""
+        text += f"/vis/open OGLSQt\n"
+        text += f"/vis/viewer/reset\n"
+        text += f"/vis/drawVolume\n"
+        text += f"/vis/scene/add/hits\n"
+        text += f"/tracking/storeTrajectory 1\n"
+        text += f"/vis/scene/add/trajectories\n"
+        # text += f"/gate/application/setTotalNumberOfPrimaries 100\n"
         for k,v in self.vis.items():
             if k in ["style", "viewpointThetaPhi"]:
                 pre = "/vis/viewer/set"
@@ -341,71 +357,83 @@ class Application:
                 pre = "/vis/scene"
             elif k in ["auxiliaryEdges"]:
                 if v is True:
-                    print(f"/vis/viewer/set/auxiliaryEdge true")
+                    text += f"/vis/viewer/set/auxiliaryEdge true\n"
                 continue
             elif k in ["axes"]:
                 if v is True:
-                    print(f"/vis/scene/add/axes")
+                    text += f"/vis/scene/add/axes\n"
                 continue
             else:
                 pre = "/vis"
-            print(f"{pre}/{k} {tup2str(v)}")
+            text += f"{pre}/{k} {tup2str(v)}\n"
+        return text
 
     def print_mat(self):
         mat = f"{self.matpath}"
-        print(f"/gate/geometry/setMaterialDatabase {mat}")
+        text = f"/gate/geometry/setMaterialDatabase {mat}\n"
+        return text
 
     def print_phys(self):
-        print("\n# Physics\n")
-        print(f"/gate/physics/addPhysicsList {self.physics}")
+        text = "\n# Physics\n\n"
+        text += f"/gate/physics/addPhysicsList {self.physics}\n"
+        return text
 
     def print_world(self):
-        print("\n# World\n")
+        text = "\n# World\n\n"
         u = self.world["unit"]
-        print(f"/gate/world/geometry/setXLength {self.world['x']} {u}")
-        print(f"/gate/world/geometry/setYLength {self.world['y']} {u}")
-        print(f"/gate/world/geometry/setZLength {self.world['z']} {u}")
+        text += f"/gate/world/geometry/setXLength {self.world['x']} {u}\n"
+        text += f"/gate/world/geometry/setYLength {self.world['y']} {u}\n"
+        text += f"/gate/world/geometry/setZLength {self.world['z']} {u}\n"
         if self.world['material'] is not None:
-            print(f"/gate/world/setMaterial {self.world['material']}")
-        print(f"/gate/world/vis/forceWireframe true")
+            text += f"/gate/world/setMaterial {self.world['material']}\n"
+        text += f"/gate/world/vis/forceWireframe true\n"
+        return text
 
     def print_outputs(self):
-        print("\n# Outputs\n")
+        text = "\n# Outputs\n\n"
         for o in self.outputs:
-            o.print()
+            text += o.print()
+        return text
 
     def print_primitives(self):
-        print("\n# Primitives\n")
+        text = "\n# Primitives\n\n"
         for p in self.primitives:
             pre = f"/gate/world/daughters"
-            print(f"{pre}/name {p.name}")
-            print(f"{pre}/insert {p.geo}")
-            p.print()
+            text += f"{pre}/name {p.name}\n"
+            text += f"{pre}/insert {p.geo}\n"
+            text += p.print()
+        return text
 
     def print_systems(self):
-        print("\n# Systems\n")
+        text = "\n# Systems\n\n"
         for s in self.systems:
-            s.print()
+            text += s.print()
+        return text
 
     def print_digis(self):
-        print("\n# Digitizers\n")
+        text = "\n# Digitizers\n\n"
         for d in self.digis:
-            d.print()
+            text += d.print()
+        return text
 
     def print_sources(self):
-        print("\n# Sources\n")
+        text = "\n# Sources\n\n"
         for s in self.sources:
-            s.print()
+            text += s.print()
+        return text
 
     def print_init(self):
-        print("\n# Init\n")
-        print("/gate/run/initialize")
+        text = "\n# Init\n\n"
+        text += "/gate/run/initialize\n"
+        text += "/run/printProgress 100000\n"
+        return text
 
     def print_start(self):
-        print("\n# Start\n")
-        print("/gate/random/setEngineName MersenneTwister")
-        print("/gate/random/setEngineSeed auto")
-        print("/gate/application/startDAQ")
+        text = "\n# Start\n\n"
+        text += "/gate/random/setEngineName MersenneTwister\n"
+        text += "/gate/random/setEngineSeed auto\n"
+        text += "/gate/application/startDAQ\n"
+        return text
 
 # utilities
 
