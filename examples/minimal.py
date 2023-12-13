@@ -18,5 +18,5 @@ a.add(Scanner("world", levels=[crystal], sensitiveDetector="crystal"))
 a.add(SimulationStatisticActor("stats", "stats.txt"))
 a.setVis({"zoom": 1, "style": "surface", "viewpointThetaPhi": (45, 135),
           "endOfEventAction": "accumulate", "axes": True})
-a.print()
+print(a.print())
 

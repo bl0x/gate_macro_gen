@@ -4,9 +4,21 @@ class Actor():
     def __init__(self):
         pass
 
-class Source():
+class Repeater():
     def __init__(self):
         pass
+
+class Source():
+    def __init__(self, name, **kwargs):
+        self.name = name
+        self.props = kwargs
+    def print(self):
+        p = self.props
+        pre = f"/gate/source/{self.name}"
+        text = ""
+        if "activity" in p:
+            text += f"{pre}/setActivity {tup2str(p['activity'])}\n"
+        return text
 
 class Digi():
     def __init__(self):
@@ -18,7 +30,7 @@ class Output():
 
 class Primitive():
     def __init__(self, name, parent, geo, material, position, rotations=None,
-                 color=None):
+                 color=None, repeaters=None):
         self.name = name
         self.parent = parent
         self.geo = geo
@@ -26,6 +38,7 @@ class Primitive():
         self.rotations = rotations
         self.material = material
         self.color = color
+        self.repeaters = repeaters
     def print(self):
         pre = f"/gate/{self.name}"
         text = f"{pre}/setMaterial {self.material}\n"
@@ -37,6 +50,12 @@ class Primitive():
                 text += f"{pre}/setRotationAxis {tup2str(r['axis'])}\n"
                 text += f"{pre}/setRotationAngle {tup2str(r['angle'])}\n"
         text += f"{pre}/setTranslation {tup2str(self.position)}\n"
+        if self.repeaters is not None:
+            if isinstance(self.repeaters, list):
+                for r in self.repeaters:
+                    text += r.print(self.name)
+            else:
+                text += self.repeaters.print(self.name)
         return text
     def dict(self):
         return {"name": self.name,
@@ -57,6 +76,28 @@ class SimulationStatisticActor(Actor):
     def print(self):
         text = f"/gate/actor/addActor SimulationStatisticActor {self.name}\n"
         text += f"/gate/actor/{self.name}/save {self.filename}\n"
+        return text
+
+class FluenceActor(Actor):
+    def __init__(self, name, filename, **kwargs):
+        self.name = name
+        self.filename = filename
+        self.props = kwargs
+    def print(self):
+        text = f"/gate/actor/addActor FluenceActor {self.name}\n"
+        pre = f"/gate/actor/{self.name}"
+        text += f"{pre}/save {self.filename}\n"
+        text += f"{pre}/stepHitType pre\n"
+        p = self.props
+        if "attach" in p:
+            text += f"{pre}/attachTo      {p['attach']}\n"
+        if "size" in p:
+            text += f"{pre}/setSize       {tup2str(p['size'])}\n"
+        if "resolution" in p:
+            text += f"{pre}/setResolution {tup2str(p['resolution'])}\n"
+        if "scatter" in p:
+            enable = "true" if p['scatter'] == True else "false"
+            text += f"{pre}/enableScatter {enable}\n"
         return text
 
 class DoseActor(Actor):
@@ -105,24 +146,105 @@ class EnergySpectrumActor(Actor):
                               "EdepMin", "EdepMax", "NumberOfEdepBins")
         return text
 
+class LinearRepeater(Repeater):
+    def __init__(self, **kwargs):
+        self.props = kwargs
+    def print(self, parent):
+        p = self.props
+        pre = f"/gate/{parent}/linear"
+        text = f"/gate/{parent}/repeaters/insert linear\n"
+        text += f"{pre}/setRepeatNumber {p['n']}\n"
+        text += f"{pre}/setRepeatVector {tup2str(p['vector'])}\n"
+        return text
 
+class RingRepeater(Repeater):
+    def __init__(self, **kwargs):
+        self.props = kwargs
+    def print(self, parent):
+        p = self.props
+        pre = f"/gate/{parent}/ring"
+        text = f"/gate/{parent}/repeaters/insert ring\n"
+        text += f"{pre}/setRepeatNumber {p['n']}\n"
+        text += f"{pre}/setModuloNumber {p['modulo']}\n"
+        text += f"{pre}/setPoint1 {tup2str(p['point1'])}\n"
+        text += f"{pre}/setPoint2 {tup2str(p['point2'])}\n"
+        a, da, u = p['angle']
+        text += f"{pre}/setFirstAngle {a} {u}\n"
+        text += f"{pre}/setAngularSpan {da} {u}\n"
+        rotate = "enable" if p['rotate'] == True else "disable"
+        text += f"{pre}/{rotate}AutoRotation\n"
+        return text
+
+class QuadrantRepeater(Repeater):
+    def __init__(self, **kwargs):
+        self.props = kwargs
+    def print(self, parent):
+        p = self.props
+        pre = f"/gate/{parent}/quadrant"
+        text = f"/gate/{parent}/repeaters/insert quadrant\n"
+        text += f"{pre}/setLineNumber {p['lines']}\n"
+        text += f"{pre}/setOrientation {tup2str(p['orientation'])}\n"
+        text += f"{pre}/setCopySpacing {tup2str(p['spacing'])}\n"
+        text += f"{pre}/setMaxRange {tup2str(p['range'])}\n"
+        return text
+
+class SourcePencilBeam(Source):
+    def __init__(self, name, **kwargs):
+        super().__init__(name, **kwargs)
+    def print(self):
+        pre = f"/gate/source/{self.name}"
+        text = f"/gate/source/addSource {self.name} PencilBeam\n"
+        text += super().print()
+        p = self.props
+        if "particle" in p:
+            text += f"{pre}/setParticleType {p['particle']}\n"
+        if "energy" in p:
+            e, de, ue = p['energy']
+            text += f"{pre}/setEnergy      {e} {ue}\n"
+            text += f"{pre}/setSigmaEnergy {de} {ue}\n"
+        if "position" in p:
+                text += f"{pre}/setPosition {tup2str(p['position'])}\n"
+        if "spread" in p:
+                dx, dy, u = p['spread']
+                text += f"{pre}/setSigmaX {dx} {u}\n"
+                text += f"{pre}/setSigmaY {dy} {u}\n"
+        if "rotation" in p:
+                r = p['rotation']
+                text += f"{pre}/setRotationAxis  {tup2str(r['axis'])}\n"
+                text += f"{pre}/setRotationAngle {tup2str(r['angle'])}\n"
+        if "divergence" in p:
+                theta, phi, u = p['divergence']
+                text += f"{pre}/setSigmaTheta {theta} {u}\n"
+                text += f"{pre}/setSigmaPhi   {phi} {u}\n"
+        if "emittance" in p:
+                theta, phi, t_norm, p_norm = p['emittance']
+                u = "mm*mrad"
+                text += f"{pre}/setEllipseXThetaEmittance    {theta} {u}\n"
+                text += f"{pre}/setEllipseXThetaRotationNorm {t_norm} {u}\n"
+                text += f"{pre}/setEllipseYPhiEmittance      {phi} {u}\n"
+                text += f"{pre}/setEllipseYPhiRotationNorm   {p_norm} {u}\n"
+        return text
 
 
 class SourceGps(Source):
     def __init__(self, name, **kwargs):
-        self.name = name
-        self.props = kwargs
+        super().__init__(name, **kwargs)
     def print(self):
-        p = self.props
         pre = f"/gate/source/{self.name}"
         text = f"/gate/source/addSource {self.name} gps\n"
-        if "activity" in p:
-            text += f"{pre}/setActivity {tup2str(p['activity'])}\n"
+        text += super().print()
+        p = self.props
         pre += "/gps"
         if "particle" in p:
             text += f"{pre}/particle {p['particle']}\n"
         if "mono" in p:
             text += f"{pre}/ene/mono {tup2str(p['mono'])}\n"
+        if "brem" in p:
+            emin, emax, unit, temp = p['brem']
+            text += f"{pre}/ene/type Brem\n"
+            text += f"{pre}/ene/min {emin} {unit}\n"
+            text += f"{pre}/ene/max {emax} {unit}\n"
+            text += f"{pre}/ene/temp {temp}\n"
         if "angle" in p:
             for k,v in p["angle"].items():
                 text += f"{pre}/ang/{k} {tup2str(v)}\n"
@@ -199,9 +321,9 @@ class Scanner(System):
 
 class Box(Primitive):
     def __init__(self, name, size, material, position, parent=None,
-                 rotations=None, color=None):
+                 rotations=None, color=None, repeaters=None):
         super().__init__(name, parent, "box", material, position, rotations,
-                         color)
+                         color, repeaters)
         self.size = size
     def print(self):
         text = super().print()
@@ -217,9 +339,10 @@ class Box(Primitive):
 
 class Cylinder(Primitive):
     def __init__(self, name, radius, height, material, position,
-                 parent=None, rotations=None, phi=None, color=None):
+                 parent=None, rotations=None, phi=None, color=None,
+                 repeaters=None):
         super().__init__(name, parent, "cylinder", material, position,
-                         rotations, color)
+                         rotations, color, repeaters)
         self.radius = radius
         self.height = height
         self.phi = phi
