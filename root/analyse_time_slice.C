@@ -27,9 +27,9 @@ void analyse_time_slice(const char *filename)
 
 	int n_crystals = 32;
 
-	h = new TH2F("posx/time", "posx/time", 10, 0, 1, 1000, -1000, 1000);
-	h2 = new TH2F("id1/time", "id1/time", 10, 0, 1, 2, 0, 2);
-	h3 = new TH2F("id2/time", "id2/time", 10, 0, 1, n_crystals, 0, n_crystals);
+	h = new TH2F("posx/time", "posx/time", 20, 0, 1, 1000, -800, 800);
+	h2 = new TH2F("id1/time", "id1/time", 20, 0, 1, 2, 0, 2);
+	h3 = new TH2F("id2/time", "id2/time", 20, 0, 1, n_crystals, 0, n_crystals);
 
 	for (int i = 0; i < entries; ++i) {
 		t->GetEntry(i);

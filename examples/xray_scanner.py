@@ -1,12 +1,15 @@
 from gate_macro_gen import *
 
+readout_rate_hz = 20
+e_keV = 120
+belt_speed_cm_s = 20
+
 a = Application()
 a.setMatpath("/home/bloeher/opt/Gate-9.3/GateMaterials.db")
 a.setPhysics("emstandard")
 a.setWorld(x = 200, y = 200, z = 200, unit = "cm", material = "Air")
-a.setTimeSliceDuration(0.1)
+a.setTimeSliceDuration(1.0/readout_rate_hz)
 
-e_keV = 120
 emin = 1
 emax = e_keV
 temp = 11606000 * e_keV # 1 eV = 11606 Kelvin
@@ -52,26 +55,26 @@ crystal = Box(
 block1 = Box(
         name = "block1",
         size = (10, 1, 10, "cm"),
-        position = (-50, 0, 0, "cm"),
+        position = (-50, 0, -10, "cm"),
         material = "Aluminium",
         color = "yellow",
-        motion = Translation(10, 0, 10, "cm/s")
+        motion = Translation(10, 0, belt_speed_cm_s, "cm/s")
 )
 block2 = Box(
         name = "block2",
         size = (10, 2, 10, "cm"),
-        position = (-40, 0, 0, "cm"),
+        position = (-40, 0, -10, "cm"),
         material = "Aluminium",
         color = "yellow",
-        motion = Translation(10, 0, 10, "cm/s")
+        motion = Translation(10, 0, belt_speed_cm_s, "cm/s")
 )
 block3 = Box(
         name = "block3",
         size = (10, 4, 10, "cm"),
-        position = (-30, 0, 0, "cm"),
+        position = (-30, 0, -10, "cm"),
         material = "Aluminium",
         color = "yellow",
-        motion = Translation(10, 0, 10, "cm/s")
+        motion = Translation(10, 0, belt_speed_cm_s, "cm/s")
 )
 a.add(block1);
 a.add(block2);
