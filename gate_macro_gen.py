@@ -8,6 +8,18 @@ class Repeater():
     def __init__(self):
         pass
 
+class Translation():
+    def __init__(self, x, y, z, unit):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.unit = unit
+    def print(self, parent):
+        text = f"/gate/{parent}/moves/insert translation\n"
+        speed = f"{self.x} {self.y} {self.z} {self.unit}"
+        text += f"/gate/{parent}/translation/setSpeed {speed}\n"
+        return text
+
 class Source():
     def __init__(self, name, **kwargs):
         self.name = name
@@ -30,7 +42,7 @@ class Output():
 
 class Primitive():
     def __init__(self, name, parent, geo, material, position, rotations=None,
-                 color=None, repeaters=None):
+                 color=None, repeaters=None, motion=None):
         self.name = name
         self.parent = parent
         self.geo = geo
@@ -39,6 +51,7 @@ class Primitive():
         self.material = material
         self.color = color
         self.repeaters = repeaters
+        self.motion = motion
     def print(self):
         pre = f"/gate/{self.name}"
         text = f"{pre}/setMaterial {self.material}\n"
@@ -56,6 +69,12 @@ class Primitive():
                     text += r.print(self.name)
             else:
                 text += self.repeaters.print(self.name)
+        if self.motion is not None:
+            if isinstance(self.motion, list):
+                for m in self.motion:
+                    text += m.print(self.name)
+            else:
+                text += self.motion.print(self.name)
         return text
     def dict(self):
         return {"name": self.name,
@@ -321,9 +340,9 @@ class Scanner(System):
 
 class Box(Primitive):
     def __init__(self, name, size, material, position, parent=None,
-                 rotations=None, color=None, repeaters=None):
+                 rotations=None, color=None, repeaters=None, motion=None):
         super().__init__(name, parent, "box", material, position, rotations,
-                         color, repeaters)
+                         color, repeaters, motion)
         self.size = size
     def print(self):
         text = super().print()
@@ -340,9 +359,9 @@ class Box(Primitive):
 class Cylinder(Primitive):
     def __init__(self, name, radius, height, material, position,
                  parent=None, rotations=None, phi=None, color=None,
-                 repeaters=None):
+                 repeaters=None, motion=None):
         super().__init__(name, parent, "cylinder", material, position,
-                         rotations, color, repeaters)
+                         rotations, color, repeaters, motion)
         self.radius = radius
         self.height = height
         self.phi = phi
@@ -373,19 +392,23 @@ class RootOutput(Output):
         return text
 
 class TreeOutput(Output):
-    def __init__(self, filenames, hits, collections):
+    def __init__(self, filenames, hits, collections=None):
         self.filenames = filenames
         self.hits = hits
         self.collections = collections
     def print(self):
         pre = "/gate/output/tree"
         text = f"{pre}/enable\n"
-        for f in self.filenames:
-            text += f"{pre}/addFileName {f}\n"
+        if isinstance(self.filenames, list):
+            for f in self.filenames:
+                text += f"{pre}/addFileName {f}\n"
+        else:
+            text += f"{pre}/addFileName {self.filenames}\n"
         if self.hits is not None:
             text += f"{pre}/hits/enable\n"
-        for c in self.collections:
-            text += f"{pre}/addCollection {c}\n"
+        if self.collections is not None:
+            for c in self.collections:
+                text += f"{pre}/addCollection {c}\n"
         return text
 
 # main application class
@@ -401,7 +424,19 @@ class Application:
         self.world = {"x": 1, "y": 1, "z": 1, "unit": "m", "material": "Vacuum"}
         self.matpath = "GateMaterials.db"
         self.physics = "emstandard_opt4"
+        self.slice_duration = 1
+        self.time_stop = 1
+        self.time_start = 0
         self.vis = None
+
+    def setTimeStop(self, t):
+        self.time_stop = t
+
+    def setTimeStart(self, t):
+        self.time_start = t
+
+    def setTimeSliceDuration(self, t):
+        self.slice_duration = t
 
     def setMatpath(self, path):
         self.matpath = path
@@ -555,6 +590,9 @@ class Application:
         text = "\n# Start\n\n"
         text += "/gate/random/setEngineName MersenneTwister\n"
         text += "/gate/random/setEngineSeed auto\n"
+        text += f"/gate/application/setTimeSlice {self.slice_duration} s\n"
+        text += f"/gate/application/setTimeStart {self.time_start} s\n"
+        text += f"/gate/application/setTimeStop {self.time_stop} s\n"
         text += "/gate/application/startDAQ\n"
         return text
 

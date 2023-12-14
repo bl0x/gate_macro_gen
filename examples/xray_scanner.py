@@ -4,6 +4,7 @@ a = Application()
 a.setMatpath("/home/bloeher/opt/Gate-9.3/GateMaterials.db")
 a.setPhysics("emstandard")
 a.setWorld(x = 200, y = 200, z = 200, unit = "cm", material = "Air")
+a.setTimeSliceDuration(0.1)
 
 e_keV = 120
 emin = 1
@@ -12,7 +13,7 @@ temp = 11606000 * e_keV # 1 eV = 11606 Kelvin
 a.add(SourceGps("xray",
                 particle = "gamma",
                 brem = (emin, emax, "keV", temp),
-                activity = (1e3, "becquerel"),
+                activity = (1e6, "becquerel"),
                 angle = {"type": "iso", "rot1": (0, 0, 1)},
                 position = {"type": "Volume", "shape": "Cylinder",
                             "radius": (2, "mm"),
@@ -24,8 +25,8 @@ a.add(SourceGps("xray",
 
 line = Box(
         name = "line",
-        size = (10, 100, 10, "cm"),
-        position = (55, 0, 0, "cm"),
+        size = (10, 160, 10, "cm"),
+        position = (85, 0, 0, "cm"),
         material = "Air",
         color = "cyan",
         repeaters = RingRepeater(
@@ -43,12 +44,40 @@ crystal = Box(
         position = (0, 0, 0, "cm"),
         material = "CsITl",
         repeaters = LinearRepeater(
-            n = 10,
+            n = 16,
             vector = (0, 10, 0, "cm")
         ),
         color = "magenta"
 )
-a.add(Scanner("world", levels=[line,crystal], sensitiveDetector="crystal"))
+block1 = Box(
+        name = "block1",
+        size = (10, 1, 10, "cm"),
+        position = (-50, 0, 0, "cm"),
+        material = "Aluminium",
+        color = "yellow",
+        motion = Translation(10, 0, 10, "cm/s")
+)
+block2 = Box(
+        name = "block2",
+        size = (10, 2, 10, "cm"),
+        position = (-40, 0, 0, "cm"),
+        material = "Aluminium",
+        color = "yellow",
+        motion = Translation(10, 0, 10, "cm/s")
+)
+block3 = Box(
+        name = "block3",
+        size = (10, 4, 10, "cm"),
+        position = (-30, 0, 0, "cm"),
+        material = "Aluminium",
+        color = "yellow",
+        motion = Translation(10, 0, 10, "cm/s")
+)
+a.add(block1);
+a.add(block2);
+a.add(block3);
+a.add(Scanner("world", levels=[line,crystal],
+              sensitiveDetector="crystal"))
 
 a.add(SinglesDigi("crystal", "adder",
                  {"positionPolicy": "energyWeightedCentroid"}))
@@ -61,15 +90,20 @@ a.add(SimulationStatisticActor("stats", "stats.txt"))
 
 # Output
 a.add(RootOutput(
-        filename = "/tmp/xray_scan",
+        filename = "/tmp/xray_scan_1e6",
         flags = ["Hit",
-                 "Singles",
+                 "Singles_crystal",
                  "Ntuple"
                 ]
 ))
+a.add(TreeOutput(
+        filenames = "/tmp/xray_scan_1e6_tree.root",
+        hits = True,
+        collections = ["Singles_crystal"]
+))
 
-a.setVis({"zoom": 1, "style": "wireframe", "viewpointThetaPhi": (0,0),
-          "endOfEventAction": "accumulate", "verbose": 1,
-          "auxiliaryEdges": False, "axes": True})
+#a.setVis({"zoom": 1, "style": "wireframe", "viewpointThetaPhi": (0,0),
+#          "endOfEventAction": "accumulate", "verbose": 1,
+#          "auxiliaryEdges": False, "axes": True})
 
 print(a.print())
