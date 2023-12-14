@@ -14,14 +14,16 @@ void analyse_time_slice(const char *filename)
 	double time;
 	float energy;
 	float posx;
-	Int_t id1;
-	Int_t id2;
+	ULong64_t id1;
+	ULong64_t id2;
+	/*Int_t id1;
+	Int_t id2;*/
 
 	t->SetBranchAddress("energy", &energy);
 	t->SetBranchAddress("time", &time);
 	t->SetBranchAddress("globalPosX", &posx);
-	t->SetBranchAddress("level1ID", &id1);
-	t->SetBranchAddress("level2ID", &id2);
+	t->SetBranchAddress("line/level1ID", &id1);
+	t->SetBranchAddress("line/level2ID", &id2);
 
 	int entries = t->GetEntries();
 
@@ -36,6 +38,7 @@ void analyse_time_slice(const char *filename)
 		h->Fill(time, -posx);
 		h2->Fill(time, id1);
 		if (id1 == 1) {
+			printf("%d %d\n", id1, id2);
 			h3->Fill(time, id2);
 		}
 	}
