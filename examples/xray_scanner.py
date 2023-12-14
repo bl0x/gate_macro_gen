@@ -40,12 +40,12 @@ line = Box(
 )
 crystal = Box(
         name = "crystal",
-        size = (1, 10, 1, "cm"),
+        size = (1, 5, 1, "cm"),
         position = (0, 0, 0, "cm"),
         material = "CsITl",
         repeaters = LinearRepeater(
-            n = 16,
-            vector = (0, 10, 0, "cm")
+            n = 32,
+            vector = (0, 5, 0, "cm")
         ),
         color = "magenta"
 )
