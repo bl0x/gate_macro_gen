@@ -97,6 +97,20 @@ class SimulationStatisticActor(Actor):
         text += f"/gate/actor/{self.name}/save {self.filename}\n"
         return text
 
+class PhaseSpaceActor(Actor):
+    def __init__(self, name, filename, **kwargs):
+        self.name = name
+        self.filename = filename
+        self.props = kwargs
+    def print(self):
+        text = f"/gate/actor/addActor PhaseSpaceActor {self.name}\n"
+        pre = f"/gate/actor/{self.name}"
+        text += f"{pre}/save {self.filename}\n"
+        p = self.props
+        if "attach" in p:
+            text += f"{pre}/attachTo    {p['attach']}\n"
+        return text
+
 class FluenceActor(Actor):
     def __init__(self, name, filename, **kwargs):
         self.name = name
@@ -258,6 +272,9 @@ class SourceGps(Source):
             text += f"{pre}/particle {p['particle']}\n"
         if "mono" in p:
             text += f"{pre}/ene/mono {tup2str(p['mono'])}\n"
+        if "user_spectrum" in p:
+            text += f"{pre}/ene/type UserSpectrum\n"
+            text += f"{pre}/setSpectrumFile {p['user_spectrum']}\n"
         if "brem" in p:
             emin, emax, unit, temp = p['brem']
             text += f"{pre}/ene/type Brem\n"
@@ -387,6 +404,10 @@ class RootOutput(Output):
         pre = "/gate/output/root"
         text = f"{pre}/enable\n"
         text += f"{pre}/setFileName {self.filename}\n"
+        if "Hits" not in self.flags:
+            text += f"{pre}/setRootHitFlag 0\n"
+        if "Singles" not in self.flags:
+            text += f"{pre}/setRootSinglesFlag 0\n"
         for f in self.flags:
             text += f"{pre}/setRoot{f}Flag 1\n"
         return text
@@ -421,6 +442,7 @@ class Application:
         self.digis = []
         self.actors = []
         self.primitives = []
+        self.attribs = []
         self.world = {"x": 1, "y": 1, "z": 1, "unit": "m", "material": "Vacuum"}
         self.matpath = "GateMaterials.db"
         self.physics = "emstandard_opt4"
@@ -428,6 +450,9 @@ class Application:
         self.time_stop = 1
         self.time_start = 0
         self.vis = None
+
+    def set(self, text):
+        self.attribs.append(text)
 
     def setTimeStop(self, t):
         self.time_stop = t
@@ -482,6 +507,7 @@ class Application:
         text += self.print_systems()
         text += self.print_actors()
         text += self.print_digis()
+        text += self.print_attribs()
         text += self.print_init()
         text += self.print_sources()
         text += self.print_outputs()
@@ -578,6 +604,12 @@ class Application:
         text = "\n# Sources\n\n"
         for s in self.sources:
             text += s.print()
+        return text
+
+    def print_attribs(self):
+        text = "\n# Attributes\n\n"
+        for a in self.attribs:
+            text += a + "\n"
         return text
 
     def print_init(self):
