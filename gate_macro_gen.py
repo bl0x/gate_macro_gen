@@ -24,12 +24,17 @@ class Source():
     def __init__(self, name, **kwargs):
         self.name = name
         self.props = kwargs
+        self.vis = False
     def print(self):
         p = self.props
         pre = f"/gate/source/{self.name}"
         text = ""
         if "activity" in p:
             text += f"{pre}/setActivity {tup2str(p['activity'])}\n"
+        if "attach" in p:
+            text += f"{pre}/attachTo {p['attach']}\n"
+        if self.vis:
+            text += f"{pre}/visualize 2000 yellow 3\n"
         return text
 
 class Digi():
@@ -425,7 +430,7 @@ class TreeOutput(Output):
                 text += f"{pre}/addFileName {f}\n"
         else:
             text += f"{pre}/addFileName {self.filenames}\n"
-        if self.hits is not None:
+        if self.hits is not None and self.hits:
             text += f"{pre}/hits/enable\n"
         if self.collections is not None:
             for c in self.collections:
@@ -498,6 +503,7 @@ class Application:
         if self.vis is not None:
             text += "# NOTE: Visualisation enabled: Setting all activities to 1e3 Bq\n"
             for s in self.sources:
+                s.vis = True
                 if "activity" in s.props:
                     s.props["activity"] = (1e3, "becquerel")
         text += self.print_mat()
@@ -582,7 +588,10 @@ class Application:
     def print_primitives(self):
         text = "\n# Primitives\n\n"
         for p in self.primitives:
-            pre = f"/gate/world/daughters"
+            if p.parent is not None:
+                pre = f"/gate/{p.parent}/daughters"
+            else:
+                pre = f"/gate/world/daughters"
             text += f"{pre}/name {p.name}\n"
             text += f"{pre}/insert {p.geo}\n"
             text += p.print()
