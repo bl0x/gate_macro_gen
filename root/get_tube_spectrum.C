@@ -5,7 +5,7 @@ void get_tube_spectrum(TString filename, float e_MeV)
 
 	TTree *t = (TTree *)f->Get("Singles");
 
-	int bins = 100;
+	int bins = 200;
 
 	TH1F *h = new TH1F("e", Form("E = %d keV", (int)round(e_MeV * 1e3)),
 	    bins, 0, e_MeV*1.1);
