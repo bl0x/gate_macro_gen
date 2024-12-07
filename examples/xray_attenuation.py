@@ -31,7 +31,7 @@ a.setTimeStop(1.0)
 e = 140
 n = 5e6
 mat = "CsITl"
-thickness = 0.45
+thickness = 2.8
 
 if do_vis == True:
     e = 50
@@ -54,7 +54,7 @@ a.add(SourceGps("x-rays",
 ))
 
 filter = Box("filter",
-        size = (20, 20, thickness, "cm"),
+        size = (200, 200, thickness, "mm"),
         position = (0, 0, 0, "cm"),
         material = mat
 )
