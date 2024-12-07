@@ -11,7 +11,7 @@ do_vis = args.visualisation
 # Application
 
 a = Application()
-a.setMatpath("/home/bloeher/opt/Gate-9.3/GateMaterials.db")
+a.setMatpath("GateMaterials.db")
 a.setPhysics("emstandard_opt4")
 a.set("/process/em/deexcitationIgnoreCut true")
 a.set("/process/em/fluo true")

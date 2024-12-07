@@ -18,7 +18,7 @@ do_bg = args.background
 
 
 a = Application()
-a.setMatpath("/home/bloeher/opt/Gate-9.3/GateMaterials.db")
+a.setMatpath("GateMaterials.db")
 a.setPhysics("emstandard")
 a.setWorld(x = 200, y = 200, z = 200, unit = "cm", material = "Air")
 a.setTimeSliceDuration(1.0/readout_rate_hz)
