@@ -8,6 +8,18 @@ class Repeater():
     def __init__(self):
         pass
 
+def rotation(vector, angle):
+    return {"axis": vector, "angle": (angle, "deg")}
+
+def rotationX(angle):
+    return rotation((1,0,0), angle)
+
+def rotationY(angle):
+    return rotation((0,1,0), angle)
+
+def rotationZ(angle):
+    return rotation((0,0,1), angle)
+
 class Translation():
     def __init__(self, x, y, z, unit):
         self.x = x
@@ -179,7 +191,7 @@ class EnergySpectrumActor(Actor):
             for f in self.edep:
                 text += f"{pre}/enable{f}Histo true\n"
         if self.eloss is not None:
-            text += "{pre}/enableElossHisto true\n"
+            text += f"{pre}/enableElossHisto true\n"
             text += self.print_hprops(f"{pre}/energyLossHisto", self.eloss,
                               "EdepMin", "EdepMax", "NumberOfEdepBins")
         return text
@@ -293,6 +305,12 @@ class SourceGps(Source):
                 min_, max_, unit_ = p['theta']
                 text += f"{pre}/ang/mintheta {min_} {unit_}\n"
                 text += f"{pre}/ang/maxtheta {max_} {unit_}\n"
+        if "rot1" in p:
+                r1, r2, r3 = p['rot1']
+                text += f"{pre}/ang/rot1 {r1} {r2} {r3}\n"
+        if "rot2" in p:
+                r1, r2, r3 = p['rot2']
+                text += f"{pre}/ang/rot1 {r1} {r2} {r3}\n"
         if "phi" in p:
                 min_, max_, unit_ = p['phi']
                 text += f"{pre}/ang/minphi {min_} {unit_}\n"
