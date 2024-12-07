@@ -56,6 +56,10 @@ python examples/minimal.py > /tmp/macro && Gate --qt /tmp/macro
 
 Use the `test.bash` script to run a quick test with the `minimal.py` example.
 
+## Geometry export
+
+Specifying `a.vis_type = "VTK"` in the above example uses the VTK visualisation engine of Geant4 (if compiled in). The constructed geometry is then exported as `scene_vtk.gltf` in the popular GLTF format. An additional export is done after running the simulation, to also visualize the trajectories. This file is called `scene_trajectories.gltf`.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
