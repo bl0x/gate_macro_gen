@@ -4,6 +4,16 @@ This is a macro file generator for the Monte-Carlo particle simulation tool [htt
 
 **Note:** This tool is meant for the C++ based version of openGate (or simply [https://github.com/OpenGATE/Gate](Gate)). It is not meant for the new Python-based version that is in active development.
 
+## Works with:
+
+* Geant4 9.11.2
+* Gate 9.4
+
+## Tested with:
+
+* Geant4 9.10
+* Gate 9.3
+
 ## Why?
 
 openGATE macro files are listings of commands to the internal processing engine, so essentially RPC calls. Due to the modular nature of openGATE (or GEANT4, for that matter), the format of the macro files is highly repetitive.
@@ -41,6 +51,10 @@ Use this command to directly run the simulation:
 ```bash
 python examples/minimal.py > /tmp/macro && Gate --qt /tmp/macro
 ```
+
+## Testing
+
+Use the `test.bash` script to run a quick test with the `minimal.py` example.
 
 ## License
 
