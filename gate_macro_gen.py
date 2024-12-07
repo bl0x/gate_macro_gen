@@ -473,6 +473,7 @@ class Application:
         self.time_stop = 1
         self.time_start = 0
         self.vis = None
+        self.vis_type = "TSG" # default: TSG, but can also be VTK
 
     def set(self, text):
         self.attribs.append(text)
@@ -537,6 +538,7 @@ class Application:
         text += self.print_outputs()
         text += self.print_vis()
         text += self.print_start()
+        text += self.print_post_start()
         return text
 
     def print_actors(self):
@@ -549,7 +551,7 @@ class Application:
         text = "\n# Visualization\n\n"
         if self.vis is None:
             return ""
-        text += f"/vis/open OGLSQt\n"
+        text += f"/vis/open {self.vis_type}\n"
         text += f"/vis/viewer/reset\n"
         text += f"/vis/drawVolume\n"
         text += f"/vis/scene/add/hits\n"
@@ -574,6 +576,8 @@ class Application:
             else:
                 pre = "/vis"
             text += f"{pre}/{k} {tup2str(v)}\n"
+        if self.vis_type == "VTK":
+            text += f"/vis/vtk/export gltf scene_vtk"
         return text
 
     def print_mat(self):
@@ -654,6 +658,14 @@ class Application:
         text += f"/gate/application/setTimeStop {self.time_stop} s\n"
         text += "/gate/application/startDAQ\n"
         return text
+
+    def print_post_start(self):
+        if self.vis_type == "VTK":
+            text = "\n# Post-Start\n\n"
+            text += f"/vis/vtk/export gltf scene_trajectories"
+            return text
+        else:
+            return ""
 
 # utilities
 
