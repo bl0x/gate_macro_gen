@@ -473,7 +473,7 @@ class Application:
         self.time_stop = 1
         self.time_start = 0
         self.vis = None
-        self.vis_type = "TSG" # default: TSG, but can also be VTK
+        self.vis_type = "TSG" # default: TSG, but can also be VTK[_OFFSCREEN]
 
     def set(self, text):
         self.attribs.append(text)
@@ -557,6 +557,8 @@ class Application:
         text += f"/vis/scene/add/hits\n"
         text += f"/tracking/storeTrajectory 1\n"
         text += f"/vis/scene/add/trajectories\n"
+        # text += f"/vis/geometry/set/visibility world 0 true\n"
+        # text += f"/vis/geometry/set/colour world 0 0 0 1 0.3\n"
         # text += f"/gate/application/setTotalNumberOfPrimaries 100\n"
         for k,v in self.vis.items():
             if k in ["style", "viewpointThetaPhi"]:
@@ -576,8 +578,8 @@ class Application:
             else:
                 pre = "/vis"
             text += f"{pre}/{k} {tup2str(v)}\n"
-        if self.vis_type == "VTK":
-            text += f"/vis/vtk/export gltf scene_vtk"
+        if self.vis_type.startswith("VTK"):
+            text += f"/vis/vtk/export gltf scene_vtk\n"
         return text
 
     def print_mat(self):
@@ -660,9 +662,9 @@ class Application:
         return text
 
     def print_post_start(self):
-        if self.vis_type == "VTK":
+        if self.vis_type.startswith("VTK"):
             text = "\n# Post-Start\n\n"
-            text += f"/vis/vtk/export gltf scene_trajectories"
+            text += f"/vis/vtk/export gltf scene_trajectories\n"
             return text
         else:
             return ""
