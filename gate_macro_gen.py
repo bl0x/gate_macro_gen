@@ -126,6 +126,9 @@ class PhaseSpaceActor(Actor):
         p = self.props
         if "attach" in p:
             text += f"{pre}/attachTo    {p['attach']}\n"
+        if "outgoing" in p:
+        	if p['outgoing'] == True:
+        		text += f"{pre}/storeOutgoingParticles true\n"
         return text
 
 class FluenceActor(Actor):

@@ -14,13 +14,11 @@ app.add_static_files('/assets', 'assets')
 class App:
 	def __init__(self):
 		self.e_mev = 1
-		self.thickness = 1
 		self.activity = 30000
 		self.tmpfile_vis = "/tmp/xsim_vis.mac"
 		self.tmpfile = "/tmp/xsim.mac"
 		self.status = "Stopped"
 		self.log = None
-		self.entries = {}
 		self.logscale = {
 				"singles": False,
 				"incoming": False,
@@ -28,6 +26,54 @@ class App:
 		}
 		self.plot_in = None
 		self.plot_out = None
+		self.blocks = []
+		self.block_list = None
+
+	class Block():
+		def __init__(self, name):
+			self.thickness = 1
+			self.distance = 10
+			self.entries = {}
+			with a.block_list:
+				with ui.card() as self.card:
+					with ui.row():
+						ui.label("Absorber")
+						ui.button("Remove", on_click=lambda: a.remove_block(self))
+					with ui.card_section():
+						ui.number(label="Thickness [mm]:",
+				  		    value=self.thickness,
+			        		format="%.3f",
+			        		on_change=lambda e: self.set_thickness(e.value))
+						ui.number(label="Distance [mm]:",
+							value=self.distance,
+			        		format="%.3f",
+			        		on_change=lambda e: self.set_distance(e.value))
+		def set_thickness(self, t):
+			self.thickness = t
+		def set_distance(self, t):
+			self.distance = t
+
+	def add_block(self, name):
+		self.blocks.append(self.Block(name))
+
+	def remove_block(self, block):
+		self.block_list.remove(block.card)
+		if block in self.blocks:
+			self.blocks.remove(block)
+
+	def add_initial_blocks(self):
+		with a.block_list:
+			with ui.card():
+				ui.label("Generator")
+				with ui.card_section():
+					with ui.row(wrap=False):
+						ui.number(label="Energy [MeV]:", value=a.e_mev,
+			       	   	   format="%.3f",
+		   	   	   	   	   on_change=lambda e: a.set_energy(e.value))
+						ui.number(label="Activity [Bq]:", value=a.activity,
+			       	   	   format="%d",
+		   	   	   	   	   on_change=lambda e: a.set_activity(e.value))
+		self.add_block("Absorber")
 
 	def generate_script(self, vis=False):
 		# Simulation is done in vacuum, not in air
@@ -36,41 +82,41 @@ class App:
 		a.add(SourceGps("gammas", particle="gamma", mono=(self.e_mev, "MeV"),
 				  activity=(self.activity, "becquerel"),
 				  angle={"type": "iso"}, position={"centre": (0,0,25,"cm")}))
-		zpos = -5
-		# This is the material to be simulated
-		c = Box(name="crystal", size=(10,10,self.thickness,"cm"),
-		  position=(0,0,zpos,"cm"), material="CsITl")
-		a.add(Scanner("world", levels=[c],
-				sensitiveDetector="crystal"))
+		zpos = 25
 		a.add(SimulationStatisticActor("stats", "stats.txt"))
-		# These are used to record the spectrum before and after the material
-		pa1 = Box(name="recorder1", size=(10,10,0.1,"cm"),
-			position=(0,0,zpos+self.thickness/2+0.1/2,"cm"),
-			material="Vacuum")
-		pa2 = Box(name="recorder2", size=(10,10,0.1,"cm"),
-			position=(0,0,zpos-self.thickness/2-0.1/2,"cm"),
-			material="Vacuum")
-		a.add(pa1)
-		a.add(pa2)
-		a.add(PhaseSpaceActor("phasespace1", "psa1.root", attach="recorder1"))
-		a.add(PhaseSpaceActor("phasespace2", "psa2.root", attach="recorder2"))
-		if not vis:
-			a.add(SinglesDigi("crystal", "adder",
-                 	 	 	 {"positionPolicy": "energyWeightedCentroid"}))
-			a.add(SinglesDigi("crystal", "readout", {"setDepth": 1}))
-			a.add(SinglesDigi("crystal", "energyResolution",
-                 	 	 	 {"fwhm": 0.002, "energyOfReference": (662, "keV")}))
-			a.add(SinglesDigi("crystal", "pileup",
-                 	 	 	 {"setPileupVolume": "crystal", "setPileup": (4, "ns")}))
+		# This is the material to be simulated
+		blocks = []
+		for i,b in enumerate(self.blocks):
+			zpos -= b.distance
+			name = f"block_{i}"
+			syst = f"system_{i}"
+			psa1 = f"psa1_{i}.root"
+			psa2 = f"psa2_{i}.root"
+			c = Box(name=name, size=(10,10,b.thickness,"cm"),
+		  	  position=(0,0,zpos,"cm"), material="CsITl")
+			a.add(Scanner("world", levels=[c],
+					sensitiveDetector=name))
+			a.add(PhaseSpaceActor(f"phasespace_in_{i}", psa1,
+						 attach=name))
+			a.add(PhaseSpaceActor(f"phasespace_out_{i}", psa2,
+						 attach=name, outgoing=True))
+			if not vis:
+				a.add(SinglesDigi(name, "adder",
+                 	 	 	 	 {"positionPolicy": "energyWeightedCentroid"}))
+				a.add(SinglesDigi(name, "readout", {"setDepth": 1}))
+				a.add(SinglesDigi(name, "energyResolution",
+                 	 	 	 	 {"fwhm": 0.002, "energyOfReference": (662, "keV")}))
+				a.add(SinglesDigi(name, "pileup",
+                 	 	 	 	 {"setPileupVolume": name, "setPileup": (4, "ns")}))
 			# a.add(RootOutput(
         	# 		filename = "output",
         	# 		flags = ["Hit", "Singles_crystal", "Ntuple"]
 			# ))
-			a.add(TreeOutput(
-        			filenames = "tree.root",
-        			hits = True,
-        			collections = ["Singles"]
-			))
+		a.add(TreeOutput(
+        		filenames = "tree.root",
+        		hits = True,
+        		collections = ["Singles"]
+		))
 		if vis:
 			a.setVis({
 				"zoom": 10,
@@ -100,8 +146,11 @@ class App:
 		if self.gltf is None:
 			return
 		self.gltf.delete()
-		self.gltf = scene.gltf(
-				f'assets/scene_trajectories.gltf?{time.time()}')
+		try:
+			self.gltf = scene.gltf(
+					f'assets/scene_trajectories.gltf?{time.time()}')
+		except:
+			pass
 
 	async def rebuild(self):
 		self.status = "Updating geometry..."
@@ -133,38 +182,41 @@ class App:
 		self.log_add_stats()
 
 	def log_add_stats(self):
-		c = self.log.content
-		c += ("\n"
-			+ f"# Incoming gammas: {self.entries["incoming"]}\n"
-			+ f"# Outgoing gammas: {self.entries["outgoing"]}\n"
-			+ f"# Detected gammas: {self.entries["singles"]}\n"
-		)
-		self.log.content = c
+		for i,b in enumerate(self.blocks):
+			c = ("\n"
+				+ f"# Incoming block {i}: {b.entries["incoming"]}\n"
+				+ f"# Outgoing block {i}: {b.entries["outgoing"]}\n"
+				+ f"# Detected block {i}: {b.entries["singles"]}\n"
+			)
+			self.log.push(c)
 
 	def plot_singles(self):
-		t = self.get_tree("tree.Singles.root", "tree")
-		b = t.arrays()
-		self.entries["singles"] = t.num_entries
-		with self.plot as p:
-			self.plot_histogram(p, b["energy"], self.logscale["singles"])
+		for i,bl in enumerate(self.blocks):
+			t = self.get_tree(f"tree.Singles_block_{i}.root", "tree")
+			b = t.arrays()
+			bl.entries["singles"] = t.num_entries
+			with self.plot as p:
+				self.plot_histogram(p, b["energy"], self.logscale["singles"])
 
 	def plot_input_spectrum(self):
-		if self.plot_in is None:
-			return
-		t = self.get_tree("psa1.root", "PhaseSpace")
-		b = t.arrays()
-		self.entries["incoming"] = t.num_entries
-		with self.plot_in as p:
-			self.plot_histogram(p, b["Ekine"], self.logscale["incoming"])
+		for i,bl in enumerate(self.blocks):
+			if self.plot_in is None:
+				return
+			t = self.get_tree(f"psa1_{i}.root", "PhaseSpace")
+			b = t.arrays()
+			bl.entries["incoming"] = t.num_entries
+			with self.plot_in as p:
+				self.plot_histogram(p, b["Ekine"], self.logscale["incoming"])
 
 	def plot_outgoing_spectrum(self):
-		if self.plot_out is None:
-			return
-		t = self.get_tree("psa2.root", "PhaseSpace")
-		b = t.arrays()
-		self.entries["outgoing"] = t.num_entries
-		with self.plot_out as p:
-			self.plot_histogram(p, b["Ekine"], self.logscale["outgoing"])
+		for i,bl in enumerate(self.blocks):
+			if self.plot_out is None:
+				return
+			t = self.get_tree(f"psa2_{i}.root", "PhaseSpace")
+			b = t.arrays()
+			bl.entries["outgoing"] = t.num_entries
+			with self.plot_out as p:
+				self.plot_histogram(p, b["Ekine"], self.logscale["outgoing"])
 
 	def get_tree(self, filename, treename):
 		f = uproot.open(filename) # TreeOutput
@@ -204,7 +256,8 @@ class App:
 		self.write_script(script, self.tmpfile)
 		await self.run_script(self.tmpfile)
 		with open("stats.txt", "r") as f:
-			self.log.content = "".join(f.readlines())
+			text = "".join(f.readlines())
+			self.log.push(text)
 		self.display()
 		self.status = "Simulation done."
 
@@ -214,61 +267,61 @@ class App:
 
 	def set_energy(self, e):
 		self.e_mev = e
-	def set_thickness(self, t):
-		self.thickness = t
 	def set_activity(self, a):
 		self.activity = a
 
 a = App()
 
-with ui.grid(columns='1fr 2fr').classes('w-full'):
-	with ui.column().classes('w-100'):
-		ui.number(label="Energy [MeV]:", value=a.e_mev, format="%.3f",
-		   on_change=lambda e: a.set_energy(e.value))
-		ui.number(label="Thickness [mm]:", value=a.thickness, format="%.3f",
-		   on_change=lambda e: a.set_thickness(e.value))
-		ui.number(label="Activity [Bq]:", value=a.activity, format="%d",
-		   on_change=lambda e: a.set_activity(e.value))
-		ui.number(label="Activity [Bq]:", value=a.activity, format="%d",
-		   on_change=lambda e: a.set_activity(e.value))
+with ui.row(wrap=False):
+	with ui.column().classes('w-1/2'):
+		a.block_list = ui.scroll_area().classes('w-full h-96 border')
+		a.add_initial_blocks()
 		with ui.row():
+			ui.button("Add", on_click=lambda: a.add_block("Absorber"))
 			ui.button("Rebuild!", on_click=a.rebuild)
 			ui.button("Simulate!", on_click=a.simulate)
 			ui.button("Plot!", on_click=lambda: a.display())
+
 		l = ui.label("Simulation stopped")
 		l.bind_text(target_object=a, target_name="status")
+		a.log = ui.log().classes('h-128')
+
 	dist = 300
-	with ui.row():
+	with ui.column().classes('w-full'):
+		with ui.row(wrap=False):
+			with ui.column():
+				ui.label("3D view")
+				with ui.scene(grid=False,width=300,height=300) as scene:
+					asset = f'assets/scene_trajectories.gltf?{time.time()}'
+					a.gltf = scene.gltf(asset)
+					scene.move_camera(x=dist*0.6,y=dist*0.4,z=20)
+			with ui.column():
+				ui.label("Front view")
+				with ui.scene_view(scene,width=300,height=300,
+					  	  camera=ui.scene.orthographic_camera(size=500)) as view1:
+					view1.move_camera(x=dist,y=0,z=0)
+			with ui.column():
+				ui.label("Side view")
+				with ui.scene_view(scene,width=300,height=300,
+					  	  camera=ui.scene.orthographic_camera(size=500)) as view1:
+					view1.move_camera(x=0,y=dist,z=0)
 		with ui.column():
-			ui.label("3D view")
-			with ui.scene(grid=False,width=300,height=300) as scene:
-				a.gltf = scene.gltf(f'assets/scene_trajectories.gltf?{time.time()}')
-				scene.move_camera(x=dist*0.6,y=dist*0.4,z=20)
+			ui.label("Detected spectrum")
+			a.plot = ui.pyplot(close=False, figsize=(10,4))
+			with ui.row():
+				ui.button("Lin/log",
+			    on_click=lambda: a.toggle_log("singles"))
 		with ui.column():
-			ui.label("Front view")
-			with ui.scene_view(scene,width=300,height=300,
-					  camera=ui.scene.orthographic_camera(size=500)) as view1:
-				view1.move_camera(x=dist,y=0,z=0)
+			ui.label("Incoming spectrum")
+			a.plot_in = ui.pyplot(close=False, figsize=(10,4))
+			with ui.row():
+				ui.button("Lin/log",
+			    on_click=lambda: a.toggle_log("incoming"))
 		with ui.column():
-			ui.label("Side view")
-			with ui.scene_view(scene,width=300,height=300,
-					  camera=ui.scene.orthographic_camera(size=500)) as view1:
-				view1.move_camera(x=0,y=dist,z=0)
-	a.log = ui.code()
-	with ui.column():
-		ui.label("Detected spectrum")
-		a.plot = ui.pyplot(close=False, figsize=(10,4))
-		with ui.row():
-			ui.button("Lin/log", on_click=lambda: a.toggle_log("singles"))
-	with ui.column():
-		ui.label("Incoming spectrum")
-		a.plot_in = ui.pyplot(close=False, figsize=(10,4))
-		with ui.row():
-			ui.button("Lin/log", on_click=lambda: a.toggle_log("incoming"))
-	with ui.column():
-		ui.label("Outgoing spectrum")
-		a.plot_out = ui.pyplot(close=False, figsize=(10,4))
-		with ui.row():
-			ui.button("Lin/log", on_click=lambda: a.toggle_log("outgoing"))
+			ui.label("Outgoing spectrum")
+			a.plot_out = ui.pyplot(close=False, figsize=(10,4))
+			with ui.row():
+				ui.button("Lin/log",
+			    on_click=lambda: a.toggle_log("outgoing"))
 
 ui.run()
