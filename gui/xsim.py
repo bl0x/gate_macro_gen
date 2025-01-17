@@ -28,11 +28,31 @@ class App:
 		self.plot_out = None
 		self.blocks = []
 		self.block_list = None
+		self.materials = []
+		self.load_materials("GateMaterials.db")
+
+	def load_materials(self, filename):
+		with open(filename) as f:
+			content = f.readlines()
+			section = None
+			for l in content:
+				line = l.strip()
+				if line == "[Materials]":
+					section = "Materials"
+				if section == "Materials" and len(line) > 0 and line[0].isalpha():
+					parts = line.split(":", 1)
+					name = parts[0]
+					self.materials.append(name)
+		self.materials.sort()
+		print(self.materials)
 
 	class Block():
 		def __init__(self, name):
 			self.thickness = 1
+			self.width = 10
+			self.length = 10
 			self.distance = 10
+			self.material = "CsITl"
 			self.entries = {}
 			with a.block_list:
 				with ui.card() as self.card:
@@ -40,18 +60,36 @@ class App:
 						ui.label("Absorber")
 						ui.button("Remove", on_click=lambda: a.remove_block(self))
 					with ui.card_section():
-						ui.number(label="Thickness [mm]:",
-				  		    value=self.thickness,
-			        		format="%.3f",
-			        		on_change=lambda e: self.set_thickness(e.value))
-						ui.number(label="Distance [mm]:",
-							value=self.distance,
-			        		format="%.3f",
-			        		on_change=lambda e: self.set_distance(e.value))
+						with ui.grid(columns=2):
+							ui.number(label="Length [mm]:",
+				  		    	value=self.length,
+			        			format="%.3f",
+			        			on_change=lambda e: self.set_length(e.value))
+							ui.number(label="Width [mm]:",
+				  		    	value=self.width,
+			        			format="%.3f",
+			        			on_change=lambda e: self.set_width(e.value))
+							ui.number(label="Thickness [mm]:",
+				  		    	value=self.thickness,
+			        			format="%.3f",
+			        			on_change=lambda e: self.set_thickness(e.value))
+							ui.number(label="Distance [mm]:",
+								value=self.distance,
+			        			format="%.3f",
+			        			on_change=lambda e: self.set_distance(e.value))
+							ui.select(label="Material", options=a.materials,
+								with_input=True,
+								on_change=lambda e: self.set_material(e.value))
+		def set_width(self, t):
+			self.width = t
+		def set_length(self, t):
+			self.length = t
 		def set_thickness(self, t):
 			self.thickness = t
 		def set_distance(self, t):
 			self.distance = t
+		def set_material(self, t):
+			self.material = t
 
 	def add_block(self, name):
 		self.blocks.append(self.Block(name))
@@ -82,7 +120,7 @@ class App:
 		a.add(SourceGps("gammas", particle="gamma", mono=(self.e_mev, "MeV"),
 				  activity=(self.activity, "becquerel"),
 				  angle={"type": "iso"}, position={"centre": (0,0,25,"cm")}))
-		zpos = 25
+		zpos = 250
 		a.add(SimulationStatisticActor("stats", "stats.txt"))
 		# This is the material to be simulated
 		blocks = []
@@ -92,8 +130,8 @@ class App:
 			syst = f"system_{i}"
 			psa1 = f"psa1_{i}.root"
 			psa2 = f"psa2_{i}.root"
-			c = Box(name=name, size=(10,10,b.thickness,"cm"),
-		  	  position=(0,0,zpos,"cm"), material="CsITl")
+			c = Box(name=name, size=(b.length,b.width,b.thickness,"mm"),
+		  	  position=(0,0,zpos,"mm"), material=b.material)
 			a.add(Scanner("world", levels=[c],
 					sensitiveDetector=name))
 			a.add(PhaseSpaceActor(f"phasespace_in_{i}", psa1,
@@ -192,7 +230,11 @@ class App:
 
 	def plot_singles(self):
 		for i,bl in enumerate(self.blocks):
-			t = self.get_tree(f"tree.Singles_block_{i}.root", "tree")
+			if len(self.blocks) == 1:
+				rootfilename = "tree.Singles.root"
+			else:
+				rootfilename = f"tree.Singles_block_{i}.root"
+			t = self.get_tree(rootfilename, "tree")
 			b = t.arrays()
 			bl.entries["singles"] = t.num_entries
 			with self.plot as p:
@@ -298,12 +340,12 @@ with ui.row(wrap=False):
 			with ui.column():
 				ui.label("Front view")
 				with ui.scene_view(scene,width=300,height=300,
-					  	  camera=ui.scene.orthographic_camera(size=500)) as view1:
+					  	  camera=ui.scene.orthographic_camera(size=50)) as view1:
 					view1.move_camera(x=dist,y=0,z=0)
 			with ui.column():
 				ui.label("Side view")
 				with ui.scene_view(scene,width=300,height=300,
-					  	  camera=ui.scene.orthographic_camera(size=500)) as view1:
+					  	  camera=ui.scene.orthographic_camera(size=50)) as view1:
 					view1.move_camera(x=0,y=dist,z=0)
 		with ui.column():
 			ui.label("Detected spectrum")
